@@ -2975,7 +2975,7 @@ CMD:repair(playerid, params[])
         new Float:vx, Float:vy, Float:vz;
         for (new v = 1; v < MAX_VEHICLES; v++)
         {
-            if (!IsValidVehicle(v)) continue;
+            if (GetVehicleModel(v) == 0) continue;
             GetVehiclePos(v, vx, vy, vz);
             if (GetPlayerDistanceFromPoint(playerid, vx, vy, vz) < 5.0)
             {
@@ -3070,21 +3070,8 @@ stock UpdateSpeedo(playerid)
 }
 
 /* =====================================================================
- *  ATM SYSTEM (Deposit, Withdraw, Transfer)
+ *  ATM SYSTEM (Transfer)
  * =====================================================================*/
-CMD:atm(playerid, params[])
-{
-    if (!PlayerInfo[playerid][pIsLogged]) return 1;
-    new str[256];
-    str[0] = EOS;
-    new _sf_atm[128];
-    format(_sf_atm, sizeof(_sf_atm), "{FFFFFF}ATM Inferno RP\n\nSaldo: $%d\nRekening: %d\n\n", PlayerInfo[playerid][pBank], PlayerInfo[playerid][pBankRek]);
-    strcat(str, _sf_atm, sizeof(str));
-    strcat(str, "1. Tarik Uang\n2. Setor Uang\n3. Transfer\n4. Cek Saldo", sizeof(str));
-    ShowPlayerDialog(playerid, DIALOG_ATM_MENU, DIALOG_STYLE_LIST, "{00FF00}ATM", str, "Pilih", "Tutup");
-    return 1;
-}
-
 CMD:transfer(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
