@@ -660,6 +660,30 @@ public OnPlayerDisconnect(playerid, reason)
 }
 
 /* =====================================================================
+ *  OnPlayerRequestClass - handle class selection
+ * =====================================================================*/
+public OnPlayerRequestClass(playerid, classid)
+{
+    /* Jika belum login, tampilkan pesan dan tunggu dialog */
+    if (!PlayerInfo[playerid][pIsLogged])
+    {
+        /* Set kamera ke posisi spawn */
+        SetPlayerPos(playerid, 1743.20, -1862.05, 13.58);
+        SetPlayerCameraPos(playerid, 1743.20 + 5.0, -1862.05 + 5.0, 18.58);
+        SetPlayerCameraLookAt(playerid, 1743.20, -1862.05, 13.58);
+        /* Jika MySQL gagal, tampilkan dialog register sebagai fallback */
+        if (gSQL == MYSQL_INVALID_HANDLE)
+        {
+            ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD,
+                "{00FF00}Registrasi",
+                "{FFFFFF}Selamat datang di Inferno RP!\nAkun belum terdaftar.\nBuat password (min 5 karakter):",
+                "Daftar", "Keluar");
+        }
+    }
+    return 1;
+}
+
+/* =====================================================================
  *  OnPlayerDataLoaded (callback MySQL)
  * =====================================================================*/
 public OnPlayerDataLoaded(playerid)
@@ -886,13 +910,29 @@ public OnPlayerRegisterComplete(playerid)
  * =====================================================================*/
 public OnPlayerSpawn(playerid)
 {
-    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (!PlayerInfo[playerid][pIsLogged])
+    {
+        /* Jika belum login (seharusnya tidak terjadi), spawn di default */
+        SetPlayerPos(playerid, 1743.20, -1862.05, 13.58);
+        SetPlayerHealth(playerid, 100.0);
+        return 1;
+    }
 
     SetPlayerSkin(playerid, PlayerInfo[playerid][pSkin]);
     SetPlayerHealth(playerid, PlayerInfo[playerid][pHealth]);
     SetPlayerArmour(playerid, PlayerInfo[playerid][pArmor]);
-    SetPlayerPos(playerid, PlayerInfo[playerid][pPosX], PlayerInfo[playerid][pPosY], PlayerInfo[playerid][pPosZ]);
-    SetPlayerFacingAngle(playerid, PlayerInfo[playerid][pPosA]);
+
+    /* Jika posisi belum diset (0,0,0), gunakan default spawn */
+    if (PlayerInfo[playerid][pPosX] == 0.0 && PlayerInfo[playerid][pPosY] == 0.0)
+    {
+        SetPlayerPos(playerid, 1743.20, -1862.05, 13.58);
+        SetPlayerFacingAngle(playerid, 270.0);
+    }
+    else
+    {
+        SetPlayerPos(playerid, PlayerInfo[playerid][pPosX], PlayerInfo[playerid][pPosY], PlayerInfo[playerid][pPosZ]);
+        SetPlayerFacingAngle(playerid, PlayerInfo[playerid][pPosA]);
+    }
     SetPlayerInterior(playerid, PlayerInfo[playerid][pInterior]);
     SetPlayerVirtualWorld(playerid, PlayerInfo[playerid][pWorld]);
 
