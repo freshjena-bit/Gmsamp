@@ -202,6 +202,7 @@ enum E_PLAYER_DATA
     bool:pCalling,
     pCallWith,
     pCallTimer,
+    pOnDuty,
 }
 new PlayerInfo[MAX_PLAYERS][E_PLAYER_DATA];
 
@@ -776,6 +777,9 @@ public OnHUDUpdate()
             _sf_hud5 = "~r~HP: Tidak ada";
         }
         TextDrawSetString(TD_Phone, _sf_hud5);
+
+        /* Update speedometer if driving */
+        UpdateSpeedo(i);
     }
     return 1;
 }
@@ -1231,6 +1235,42 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             }
             return 1;
         }
+
+        case 1100: /* GPS Navigation */
+        {
+            if (!response) return 1;
+            new Float:gx, Float:gy, Float:gz;
+            switch (listitem)
+            {
+                case 0: { gx = 1480.91; gy = -1771.21; gz = 18.79; }
+                case 1: { gx = 2316.00; gy = -7.50; gz = 26.74; }
+                case 2: { gx = 1174.20; gy = -1324.30; gz = 14.10; }
+                case 3: { gx = 1554.50; gy = -1675.50; gz = 16.20; }
+                case 4: { gx = 1944.40; gy = -1773.70; gz = 13.40; }
+                case 5: { gx = 1751.0; gy = -1862.0; gz = 13.5; }
+                case 6: { gx = 1368.00; gy = -1279.50; gz = 13.50; }
+            }
+            SetPlayerCheckpoint(playerid, gx, gy, gz, 5.0);
+            SendMsg(playerid, COLOR_GREEN, "GPS aktif! Ikuti checkpoint merah.");
+            return 1;
+        }
+
+        case 1101: /* Menu */
+        {
+            if (!response) return 1;
+            switch (listitem)
+            {
+                case 0: cmd_stats(playerid, "");
+                case 1: cmd_help(playerid, "");
+                case 2: cmd_kerja(playerid, "");
+                case 3: cmd_dokumen(playerid, "");
+                case 4: cmd_hp(playerid, "");
+                case 5: cmd_bank(playerid, "");
+                case 6: cmd_gps(playerid, "");
+                case 7: cmd_ahelp(playerid, "");
+            }
+            return 1;
+        }
     }
     return 0;
 }
@@ -1399,6 +1439,7 @@ public OnPlayerSpawn(playerid)
 
     /* --- Show TextDraw HUD --- */
     CreatePlayerHUD(playerid);
+    CreateSpeedo(playerid);
     ShowPlayerHUD(playerid);
 
     new _sf3[512]; format(_sf3, sizeof(_sf3),  "Selamat datang, %s! Level: %d | Cash: $%d | Bank: $%d", 
@@ -2562,6 +2603,804 @@ public OnElectionEnd()
     return 1;
 }
 
+
+/* =====================================================================
+ *  HOUSE SYSTEM
+ * =====================================================================*/
+CMD:buyhouse(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_HOUSES; i++)
+    {
+        if (!HouseInfo[i][hExists]) continue;
+        if (GetPlayerDistanceFromPoint(playerid, HouseInfo[i][hX], HouseInfo[i][hY], HouseInfo[i][hZ]) > 3.0) continue;
+        if (HouseInfo[i][hOwner][0] != EOS) return SendMsg(playerid, COLOR_RED, "Rumah ini sudah dimiliki."), 1;
+        if (PlayerInfo[playerid][pCash] < HouseInfo[i][hPrice]) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup."), 1;
+        PlayerInfo[playerid][pCash] -= HouseInfo[i][hPrice];
+        HouseInfo[i][hOwner][0] = EOS;
+        strcat(HouseInfo[i][hOwner], PlayerInfo[playerid][pName], MAX_PLAYER_NAME);
+        new query[256];
+        mysql_format(gSQL, query, sizeof(query), "UPDATE `houses` SET `owner`='%e' WHERE `id`=%d", HouseInfo[i][hOwner], HouseInfo[i][hID]);
+        mysql_tquery(gSQL, query);
+        SendFmt(playerid, COLOR_GREEN, "Anda membeli rumah ID %d seharga $%d!", i, HouseInfo[i][hPrice]);
+        return 1;
+    }
+    SendMsg(playerid, COLOR_YELLOW, "Anda tidak dekat rumah manapun.");
+    return 1;
+}
+
+CMD:sellhouse(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_HOUSES; i++)
+    {
+        if (!HouseInfo[i][hExists]) continue;
+        if (strcmp(HouseInfo[i][hOwner], PlayerInfo[playerid][pName]) != 0) continue;
+        new refund = HouseInfo[i][hPrice] / 2;
+        PlayerInfo[playerid][pCash] += refund;
+        HouseInfo[i][hOwner][0] = EOS;
+        new query[128];
+        mysql_format(gSQL, query, sizeof(query), "UPDATE `houses` SET `owner`='' WHERE `id`=%d", HouseInfo[i][hID]);
+        mysql_tquery(gSQL, query);
+        SendFmt(playerid, COLOR_GREEN, "Anda menjual rumah ID %d seharga $%d.", i, refund);
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Anda tidak punya rumah.");
+    return 1;
+}
+
+CMD:enterhouse(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_HOUSES; i++)
+    {
+        if (!HouseInfo[i][hExists]) continue;
+        if (GetPlayerDistanceFromPoint(playerid, HouseInfo[i][hX], HouseInfo[i][hY], HouseInfo[i][hZ]) > 3.0) continue;
+        if (HouseInfo[i][hLocked] && strcmp(HouseInfo[i][hOwner], PlayerInfo[playerid][pName]) != 0)
+            return SendMsg(playerid, COLOR_RED, "Rumah terkunci."), 1;
+        SetPlayerPos(playerid, 2324.50, -1144.60, 1050.70);
+        SetPlayerInterior(playerid, 12);
+        PlayerInfo[playerid][pInHouse] = i;
+        SendMsg(playerid, COLOR_GREEN, "Anda masuk ke rumah.");
+        return 1;
+    }
+    SendMsg(playerid, COLOR_YELLOW, "Anda tidak dekat rumah.");
+    return 1;
+}
+
+CMD:exithouse(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pInHouse] == -1) return SendMsg(playerid, COLOR_RED, "Anda tidak di dalam rumah."), 1;
+    new i = PlayerInfo[playerid][pInHouse];
+    SetPlayerPos(playerid, HouseInfo[i][hX], HouseInfo[i][hY], HouseInfo[i][hZ]);
+    SetPlayerInterior(playerid, 0);
+    PlayerInfo[playerid][pInHouse] = -1;
+    SendMsg(playerid, COLOR_GREEN, "Anda keluar dari rumah.");
+    return 1;
+}
+
+CMD:lockhouse(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_HOUSES; i++)
+    {
+        if (!HouseInfo[i][hExists]) continue;
+        if (strcmp(HouseInfo[i][hOwner], PlayerInfo[playerid][pName]) != 0) continue;
+        HouseInfo[i][hLocked] = !HouseInfo[i][hLocked];
+        if (HouseInfo[i][hLocked]) SendMsg(playerid, COLOR_GREEN, "Rumah dikunci.");
+        else SendMsg(playerid, COLOR_GREEN, "Rumah dibuka.");
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Anda tidak punya rumah.");
+    return 1;
+}
+
+/* =====================================================================
+ *  BUSINESS SYSTEM
+ * =====================================================================*/
+CMD:buybiz(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_BUSINESSES; i++)
+    {
+        if (!BizInfo[i][bExists]) continue;
+        if (GetPlayerDistanceFromPoint(playerid, BizInfo[i][bX], BizInfo[i][bY], BizInfo[i][bZ]) > 3.0) continue;
+        if (BizInfo[i][bOwner][0] != EOS) return SendMsg(playerid, COLOR_RED, "Bisnis sudah dimiliki."), 1;
+        if (PlayerInfo[playerid][pCash] < BizInfo[i][bPrice]) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup."), 1;
+        PlayerInfo[playerid][pCash] -= BizInfo[i][bPrice];
+        BizInfo[i][bOwner][0] = EOS;
+        strcat(BizInfo[i][bOwner], PlayerInfo[playerid][pName], MAX_PLAYER_NAME);
+        new query[256];
+        mysql_format(gSQL, query, sizeof(query), "UPDATE `businesses` SET `owner`='%e' WHERE `id`=%d", BizInfo[i][bOwner], BizInfo[i][bID]);
+        mysql_tquery(gSQL, query);
+        SendFmt(playerid, COLOR_GREEN, "Anda membeli bisnis ID %d seharga $%d!", i, BizInfo[i][bPrice]);
+        return 1;
+    }
+    SendMsg(playerid, COLOR_YELLOW, "Anda tidak dekat bisnis.");
+    return 1;
+}
+
+CMD:sellbiz(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_BUSINESSES; i++)
+    {
+        if (!BizInfo[i][bExists]) continue;
+        if (strcmp(BizInfo[i][bOwner], PlayerInfo[playerid][pName]) != 0) continue;
+        new refund = BizInfo[i][bPrice] / 2;
+        PlayerInfo[playerid][pCash] += refund;
+        BizInfo[i][bOwner][0] = EOS;
+        new query[128];
+        mysql_format(gSQL, query, sizeof(query), "UPDATE `businesses` SET `owner`='' WHERE `id`=%d", BizInfo[i][bID]);
+        mysql_tquery(gSQL, query);
+        SendFmt(playerid, COLOR_GREEN, "Anda menjual bisnis seharga $%d.", refund);
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Anda tidak punya bisnis.");
+    return 1;
+}
+
+CMD:bizmenu(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    for (new i = 0; i < MAX_BUSINESSES; i++)
+    {
+        if (!BizInfo[i][bExists]) continue;
+        if (strcmp(BizInfo[i][bOwner], PlayerInfo[playerid][pName]) != 0) continue;
+        new str[256];
+        new _sf_bm[256];
+        format(_sf_bm, sizeof(_sf_bm), "{FFFFFF}Bisnis ID: %d\nHarga: $%d\nPemilik: %s\n\n1. Kunci/Buka\n2. Jual Bisnis", i, BizInfo[i][bPrice], BizInfo[i][bOwner]);
+        strcat(str, _sf_bm, sizeof(str));
+        ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Bisnis Menu", str, "Tutup", "");
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Anda tidak punya bisnis.");
+    return 1;
+}
+
+/* =====================================================================
+ *  VEHICLE OWNERSHIP SYSTEM
+ * =====================================================================*/
+CMD:buycar(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new model, color1, color2;
+    if (sscanf(params, "ddd", model, color1, color2))
+    {
+        SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /buycar [model] [warna1] [warna2]");
+        SendMsg(playerid, COLOR_YELLOW, "Harga: model x 1000. Contoh: /buycar 411 0 0 (Infernus)");
+        return 1;
+    }
+    if (model < 400 || model > 611) return SendMsg(playerid, COLOR_RED, "Model 400-611."), 1;
+    new price = model * 1000;
+    if (PlayerInfo[playerid][pCash] < price) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup."), 1;
+    new Float:x, Float:y, Float:z, Float:a;
+    GetPlayerPos(playerid, x, y, z);
+    GetPlayerFacingAngle(playerid, a);
+    x += 3.0 * floatsin(-a, degrees);
+    y += 3.0 * floatcos(-a, degrees);
+    new vid = CreateVehicle(model, x, y, z, a, color1, color2, 600);
+    new slot = -1;
+    for (new i = 0; i < MAX_PVEHICLES; i++)
+    {
+        if (!PVehInfo[i][pvExists]) { slot = i; break; }
+    }
+    if (slot == -1) return DestroyVehicle(vid), SendMsg(playerid, COLOR_RED, "Slot kendaraan penuh."), 1;
+    PlayerInfo[playerid][pCash] -= price;
+    PVehInfo[slot][pvExists] = 1;
+    PVehInfo[slot][pvModel] = model;
+    PVehInfo[slot][pvX] = x; PVehInfo[slot][pvY] = y; PVehInfo[slot][pvZ] = z; PVehInfo[slot][pvA] = a;
+    PVehInfo[slot][pvColor1] = color1; PVehInfo[slot][pvColor2] = color2;
+    PVehInfo[slot][pvOwner][0] = EOS;
+    strcat(PVehInfo[slot][pvOwner], PlayerInfo[playerid][pName], MAX_PLAYER_NAME);
+    PVehInfo[slot][pvFuel] = 50.0;
+    PVehInfo[slot][pvFuelType] = 0;
+    PVehInfo[slot][pvLocked] = 0;
+    PVehInfo[slot][pvVehicleID] = vid;
+    SendFmt(playerid, COLOR_GREEN, "Anda membeli kendaraan model %d seharga $%d! ID: %d", model, price, slot);
+    return 1;
+}
+
+CMD:lockcar(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new vid = GetPlayerVehicleID(playerid);
+    if (vid == INVALID_VEHICLE_ID)
+    {
+        new Float:vx, Float:vy, Float:vz;
+        for (new i = 0; i < MAX_PVEHICLES; i++)
+        {
+            if (!PVehInfo[i][pvExists]) continue;
+            if (strcmp(PVehInfo[i][pvOwner], PlayerInfo[playerid][pName]) != 0) continue;
+            GetVehiclePos(PVehInfo[i][pvVehicleID], vx, vy, vz);
+            if (GetPlayerDistanceFromPoint(playerid, vx, vy, vz) < 5.0)
+            {
+                PVehInfo[i][pvLocked] = !PVehInfo[i][pvLocked];
+                if (PVehInfo[i][pvLocked])
+                {
+                    SetVehicleParamsEx(PVehInfo[i][pvVehicleID], 0, 0, 0, 1, 0, 0, 0);
+                    SendMsg(playerid, COLOR_GREEN, "Mobil dikunci.");
+                }
+                else
+                {
+                    SetVehicleParamsEx(PVehInfo[i][pvVehicleID], 0, 0, 0, 0, 0, 0, 0);
+                    SendMsg(playerid, COLOR_GREEN, "Mobil dibuka.");
+                }
+                return 1;
+            }
+        }
+        SendMsg(playerid, COLOR_RED, "Anda tidak dekat kendaraan Anda.");
+        return 1;
+    }
+    for (new i = 0; i < MAX_PVEHICLES; i++)
+    {
+        if (!PVehInfo[i][pvExists]) continue;
+        if (PVehInfo[i][pvVehicleID] != vid) continue;
+        if (strcmp(PVehInfo[i][pvOwner], PlayerInfo[playerid][pName]) != 0) return SendMsg(playerid, COLOR_RED, "Ini bukan mobil Anda."), 1;
+        PVehInfo[i][pvLocked] = !PVehInfo[i][pvLocked];
+        if (PVehInfo[i][pvLocked]) SendMsg(playerid, COLOR_GREEN, "Mobil dikunci.");
+        else SendMsg(playerid, COLOR_GREEN, "Mobil dibuka.");
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Kendaraan tidak ditemukan.");
+    return 1;
+}
+
+CMD:park(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new vid = GetPlayerVehicleID(playerid);
+    if (vid == INVALID_VEHICLE_ID) return SendMsg(playerid, COLOR_RED, "Anda tidak di kendaraan."), 1;
+    for (new i = 0; i < MAX_PVEHICLES; i++)
+    {
+        if (!PVehInfo[i][pvExists]) continue;
+        if (PVehInfo[i][pvVehicleID] != vid) continue;
+        if (strcmp(PVehInfo[i][pvOwner], PlayerInfo[playerid][pName]) != 0) return SendMsg(playerid, COLOR_RED, "Ini bukan mobil Anda."), 1;
+        new Float:x, Float:y, Float:z, Float:a;
+        GetVehiclePos(vid, x, y, z);
+        GetVehicleZAngle(vid, a);
+        PVehInfo[i][pvX] = x; PVehInfo[i][pvY] = y; PVehInfo[i][pvZ] = z; PVehInfo[i][pvA] = a;
+        SendMsg(playerid, COLOR_GREEN, "Kendaraan diparkir di sini.");
+        return 1;
+    }
+    SendMsg(playerid, COLOR_RED, "Kendaraan tidak ditemukan.");
+    return 1;
+}
+
+CMD:engine(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new vid = GetPlayerVehicleID(playerid);
+    if (vid == INVALID_VEHICLE_ID) return SendMsg(playerid, COLOR_RED, "Anda tidak di kendaraan."), 1;
+    if (GetPlayerState(playerid) != PLAYER_STATE_DRIVER) return SendMsg(playerid, COLOR_RED, "Anda bukan pengemudi."), 1;
+    new engine, lights, alarm, doors, bonnet, boot, objective;
+    GetVehicleParamsEx(vid, engine, lights, alarm, doors, bonnet, boot, objective);
+    SetVehicleParamsEx(vid, !engine, lights, alarm, doors, bonnet, boot, objective);
+    if (!engine) SendMsg(playerid, COLOR_GREEN, "Mesin dinyalakan.");
+    else SendMsg(playerid, COLOR_GREEN, "Mesin dimatikan.");
+    return 1;
+}
+
+CMD:mycars(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new str[512];
+    str[0] = EOS;
+    new count = 0;
+    for (new i = 0; i < MAX_PVEHICLES; i++)
+    {
+        if (!PVehInfo[i][pvExists]) continue;
+        if (strcmp(PVehInfo[i][pvOwner], PlayerInfo[playerid][pName]) != 0) continue;
+        new line[128];
+        new _sf_mc[128];
+        format(_sf_mc, sizeof(_sf_mc), "ID: %d | Model: %d | Bensin: %.1fL\n", i, PVehInfo[i][pvModel], PVehInfo[i][pvFuel]);
+        strcat(line, _sf_mc, sizeof(line));
+        strcat(str, line, sizeof(str));
+        count++;
+    }
+    if (count == 0) return SendMsg(playerid, COLOR_RED, "Anda tidak punya kendaraan."), 1;
+    ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Kendaraan Saya", str, "Tutup", "");
+    return 1;
+}
+
+/* =====================================================================
+ *  JOB MISSIONS (Trucker, Taxi, Mechanic)
+ * =====================================================================*/
+new gJobMission[MAX_PLAYERS];
+new gJobTarget[MAX_PLAYERS];
+new Float:gTruckerPoints[][3] = {
+    {2776.0, -2435.5, 13.6},
+    {2225.0, -1150.0, 25.7},
+    {2500.0, -1700.0, 13.5},
+    {1800.0, -1900.0, 13.5},
+    {1400.0, -1700.0, 13.5}
+};
+
+CMD:mulaikerja(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pJob] == 0) return SendMsg(playerid, COLOR_RED, "Anda tidak punya pekerjaan. /kerja untuk memilih."), 1;
+    if (gJobMission[playerid] > 0) return SendMsg(playerid, COLOR_YELLOW, "Anda sedang dalam misi."), 1;
+
+    if (PlayerInfo[playerid][pJob] == 1) /* Trucker */
+    {
+        new dest = random(sizeof(gTruckerPoints));
+        gJobMission[playerid] = 1;
+        gJobTarget[playerid] = dest;
+        SetPlayerCheckpoint(playerid, gTruckerPoints[dest][0], gTruckerPoints[dest][1], gTruckerPoints[dest][2], 5.0);
+        SendMsg(playerid, COLOR_GREEN, "[TRUCKER] Antar barang ke checkpoint merah! Hadiah $3000.");
+    }
+    else if (PlayerInfo[playerid][pJob] == 2) /* Taxi */
+    {
+        gJobMission[playerid] = 2;
+        new dest = random(sizeof(gTruckerPoints));
+        gJobTarget[playerid] = dest;
+        SetPlayerCheckpoint(playerid, gTruckerPoints[dest][0], gTruckerPoints[dest][1], gTruckerPoints[dest][2], 5.0);
+        SendMsg(playerid, COLOR_GREEN, "[TAXI] Antar penumpang ke checkpoint! Hadiah $2000.");
+    }
+    else if (PlayerInfo[playerid][pJob] == 3) /* Mechanic */
+    {
+        gJobMission[playerid] = 3;
+        SendMsg(playerid, COLOR_GREEN, "[MECHANIC] Cari kendaraan rusak dan /repair dekat kendaraan.");
+    }
+    ApplyJobSkin(playerid);
+    return 1;
+}
+
+CMD:selesaikerja(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (gJobMission[playerid] == 0) return SendMsg(playerid, COLOR_RED, "Anda tidak dalam misi."), 1;
+    DisablePlayerCheckpoint(playerid);
+    new reward = 0;
+    if (gJobMission[playerid] == 1) reward = 3000;
+    else if (gJobMission[playerid] == 2) reward = 2000;
+    else if (gJobMission[playerid] == 3) reward = 2500;
+    PlayerInfo[playerid][pCash] += reward;
+    PlayerInfo[playerid][pExp] += 2;
+    gJobMission[playerid] = 0;
+    RestoreOrigSkin(playerid);
+    SendFmt(playerid, COLOR_GREEN, "Misi selesai! Anda dapat $%d dan +2 EXP.", reward);
+    return 1;
+}
+
+CMD:repair(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pJob] != 3) return SendMsg(playerid, COLOR_RED, "Hanya mechanic."), 1;
+    new vid = GetPlayerVehicleID(playerid);
+    if (vid == INVALID_VEHICLE_ID)
+    {
+        new Float:vx, Float:vy, Float:vz;
+        for (new v = 1; v < MAX_VEHICLES; v++)
+        {
+            if (!IsValidVehicle(v)) continue;
+            GetVehiclePos(v, vx, vy, vz);
+            if (GetPlayerDistanceFromPoint(playerid, vx, vy, vz) < 5.0)
+            {
+                SetVehicleHealth(v, 1000.0);
+                PlayerInfo[playerid][pCash] += 500;
+                SendMsg(playerid, COLOR_GREEN, "Kendaraan diperbaiki! +$500.");
+                return 1;
+            }
+        }
+        SendMsg(playerid, COLOR_RED, "Tidak ada kendaraan dekat Anda.");
+        return 1;
+    }
+    SetVehicleHealth(vid, 1000.0);
+    PlayerInfo[playerid][pCash] += 500;
+    SendMsg(playerid, COLOR_GREEN, "Kendaraan diperbaiki! +$500.");
+    return 1;
+}
+
+/* =====================================================================
+ *  PHONE CONTACTS
+ * =====================================================================*/
+CMD:addcontact(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pPhone] == 0) return SendMsg(playerid, COLOR_RED, "Anda tidak punya HP."), 1;
+    new name[MAX_PLAYER_NAME], number;
+    if (sscanf(params, "sd", name, number))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /addcontact [nama] [nomor]"), 1;
+    new query[256];
+    mysql_format(gSQL, query, sizeof(query), "INSERT INTO `phone_contacts` (`owner`, `name`, `number`) VALUES ('%e', '%e', %d)", PlayerInfo[playerid][pName], name, number);
+    mysql_tquery(gSQL, query);
+    SendFmt(playerid, COLOR_GREEN, "Kontak %s (%d) ditambahkan.", name, number);
+    return 1;
+}
+
+CMD:contacts(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pPhone] == 0) return SendMsg(playerid, COLOR_RED, "Anda tidak punya HP."), 1;
+    SendMsg(playerid, COLOR_YELLOW, "Kontak tersimpan di database. Gunakan /sms [nomor] untuk SMS.");
+    return 1;
+}
+
+/* =====================================================================
+ *  GPS SYSTEM
+ * =====================================================================*/
+CMD:gps(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new str[512];
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}Pilih tujuan GPS:\n", sizeof(str));
+    strcat(str, "1. Balai Kota LS\n", sizeof(str));
+    strcat(str, "2. Bank LS\n", sizeof(str));
+    strcat(str, "3. Rumah Sakit LS\n", sizeof(str));
+    strcat(str, "4. Polisi LS\n", sizeof(str));
+    strcat(str, "5. SPBU terdekat\n", sizeof(str));
+    strcat(str, "6. Toko 24/7\n", sizeof(str));
+    strcat(str, "7. Ammunation\n", sizeof(str));
+    ShowPlayerDialog(playerid, 1100, DIALOG_STYLE_LIST, "{00FF00}GPS Navigation", str, "Navigasi", "Batal");
+    return 1;
+}
+
+/* =====================================================================
+ *  SPEEDOMETER (TextDraw)
+ * =====================================================================*/
+new PlayerText:TD_Speedo[MAX_PLAYERS];
+
+stock CreateSpeedo(playerid)
+{
+    TD_Speedo[playerid] = CreatePlayerTextDraw(playerid, 500.0, 380.0, "_");
+    PlayerTextDrawLetterSize(playerid, TD_Speedo[playerid], 0.3, 1.2);
+    PlayerTextDrawColor(playerid, TD_Speedo[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_Speedo[playerid], 1);
+}
+
+stock UpdateSpeedo(playerid)
+{
+    if (GetPlayerState(playerid) != PLAYER_STATE_DRIVER)
+    {
+        PlayerTextDrawHide(playerid, TD_Speedo[playerid]);
+        return;
+    }
+    new vid = GetPlayerVehicleID(playerid);
+    new Float:vx, Float:vy, Float:vz;
+    GetVehicleVelocity(vid, vx, vy, vz);
+    new speed = floatround(floatsqroot(vx*vx + vy*vy + vz*vz) * 200.0);
+    new _sf_sp[128];
+    format(_sf_sp, sizeof(_sf_sp), "~w~Kecepatan: ~g~%d km/h", speed);
+    PlayerTextDrawSetString(playerid, TD_Speedo[playerid], _sf_sp);
+    PlayerTextDrawShow(playerid, TD_Speedo[playerid]);
+}
+
+/* =====================================================================
+ *  ATM SYSTEM (Deposit, Withdraw, Transfer)
+ * =====================================================================*/
+CMD:atm(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new str[256];
+    str[0] = EOS;
+    new _sf_atm[128];
+    format(_sf_atm, sizeof(_sf_atm), "{FFFFFF}ATM Inferno RP\n\nSaldo: $%d\nRekening: %d\n\n", PlayerInfo[playerid][pBank], PlayerInfo[playerid][pBankRek]);
+    strcat(str, _sf_atm, sizeof(str));
+    strcat(str, "1. Tarik Uang\n2. Setor Uang\n3. Transfer\n4. Cek Saldo", sizeof(str));
+    ShowPlayerDialog(playerid, DIALOG_ATM_MENU, DIALOG_STYLE_LIST, "{00FF00}ATM", str, "Pilih", "Tutup");
+    return 1;
+}
+
+CMD:transfer(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /transfer [playerid] [jumlah]"), 1;
+    if (!IsPlayerConnected(targetid)) return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    if (PlayerInfo[playerid][pBank] < amount) return SendMsg(playerid, COLOR_RED, "Saldo bank tidak cukup."), 1;
+    PlayerInfo[playerid][pBank] -= amount;
+    PlayerInfo[targetid][pBank] += amount;
+    SendFmt(playerid, COLOR_GREEN, "Anda transfer $%d ke %s.", amount, PlayerInfo[targetid][pName]);
+    SendFmt(targetid, COLOR_GREEN, "Anda menerima $%d dari %s.", amount, PlayerInfo[playerid][pName]);
+    return 1;
+}
+
+/* =====================================================================
+ *  POLICE DUTY SYSTEM
+ * =====================================================================*/
+CMD:duty(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pFaction] != 1) return SendMsg(playerid, COLOR_RED, "Hanya polisi (SAPD)."), 1;
+    PlayerInfo[playerid][pOnDuty] = !PlayerInfo[playerid][pOnDuty];
+    if (PlayerInfo[playerid][pOnDuty])
+    {
+        SetPlayerSkin(playerid, 280);
+        SetPlayerHealth(playerid, 100.0);
+        SetPlayerArmour(playerid, 100.0);
+        GivePlayerWeapon(playerid, 3, 1);
+        GivePlayerWeapon(playerid, 24, 100);
+        GivePlayerWeapon(playerid, 25, 50);
+        SendMsg(playerid, COLOR_GREEN, "[DUTY] Anda masuk dinas. Skin, armor, dan senjata diberikan.");
+    }
+    else
+    {
+        SetPlayerSkin(playerid, PlayerInfo[playerid][pSkin]);
+        SetPlayerArmour(playerid, 0.0);
+        ResetPlayerWeapons(playerid);
+        SendMsg(playerid, COLOR_YELLOW, "[DUTY] Anda keluar dinas.");
+    }
+    return 1;
+}
+
+CMD:ticket(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pFaction] != 1 || !PlayerInfo[playerid][pOnDuty])
+        return SendMsg(playerid, COLOR_RED, "Hanya polisi on-duty."), 1;
+    new targetid, amount, reason[64];
+    if (sscanf(params, "uds[64]", targetid, amount, reason))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /ticket [playerid] [jumlah] [alasan]"), 1;
+    if (!IsPlayerConnected(targetid)) return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    if (PlayerInfo[targetid][pCash] < amount) return SendMsg(playerid, COLOR_RED, "Pemain tidak punya uang."), 1;
+    PlayerInfo[targetid][pCash] -= amount;
+    SendFmt(targetid, COLOR_RED, "Anda didenda $%d oleh polisi. Alasan: %s", amount, reason);
+    SendFmt(playerid, COLOR_GREEN, "Denda $%d diberikan ke %s.", amount, PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+CMD:cuff(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pFaction] != 1 || !PlayerInfo[playerid][pOnDuty])
+        return SendMsg(playerid, COLOR_RED, "Hanya polisi on-duty."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /cuff [playerid]"), 1;
+    if (!IsPlayerConnected(targetid)) return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    if (GetPlayerDistanceFromPoint(playerid, PlayerInfo[targetid][pPosX], PlayerInfo[targetid][pPosY], PlayerInfo[targetid][pPosZ]) > 5.0)
+        return SendMsg(playerid, COLOR_RED, "Pemain terlalu jauh."), 1;
+    TogglePlayerControllable(targetid, false);
+    SendFmt(targetid, COLOR_RED, "Anda diborgol oleh %s!", PlayerInfo[playerid][pName]);
+    SendFmt(playerid, COLOR_GREEN, "Anda memborgol %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+CMD:uncuff(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pFaction] != 1 || !PlayerInfo[playerid][pOnDuty])
+        return SendMsg(playerid, COLOR_RED, "Hanya polisi on-duty."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /uncuff [playerid]"), 1;
+    TogglePlayerControllable(targetid, true);
+    SendFmt(targetid, COLOR_GREEN, "Borgol Anda dilepas oleh %s.", PlayerInfo[playerid][pName]);
+    return 1;
+}
+
+/* =====================================================================
+ *  GANG SYSTEM
+ * =====================================================================*/
+CMD:creategang(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pLevel] < 3) return SendMsg(playerid, COLOR_RED, "Butuh level 3+."), 1;
+    new gangname[48];
+    if (sscanf(params, "s[48]", gangname))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /creategang [nama]"), 1;
+    new query[256];
+    mysql_format(gSQL, query, sizeof(query), "INSERT INTO `gangs` (`name`, `leader`) VALUES ('%e', '%e')", gangname, PlayerInfo[playerid][pName]);
+    mysql_tquery(gSQL, query);
+    SendFmt(playerid, COLOR_GREEN, "Gang '%s' dibuat! Anda adalah leadernya.", gangname);
+    return 1;
+}
+
+/* =====================================================================
+ *  MONEY WASH (Pencucian Uang)
+ * =====================================================================*/
+CMD:washmoney(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (GetPlayerDistanceFromPoint(playerid, -427.38, -392.38, 16.58) > 10.0)
+        return SendMsg(playerid, COLOR_RED, "Anda harus di tempat pencucian uang."), 1;
+    new amount;
+    if (sscanf(params, "d", amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /washmoney [jumlah]"), 1;
+    if (amount < 1000) return SendMsg(playerid, COLOR_RED, "Minimal $1000."), 1;
+    /* 80% return (20% fee) */
+    new washed = amount * 80 / 100;
+    PlayerInfo[playerid][pCash] += washed;
+    SendFmt(playerid, COLOR_GREEN, "Uang dicuci: $%d (fee 20 persen). Anda dapat $%d.", amount, washed);
+    return 1;
+}
+
+/* =====================================================================
+ *  FISHING SYSTEM
+ * =====================================================================*/
+CMD:fish(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (GetPlayerState(playerid) == PLAYER_STATE_DRIVER) return SendMsg(playerid, COLOR_RED, "Turun dari kendaraan dulu."), 1;
+    /* Must be near water - simplified check */
+    new Float:z;
+    GetPlayerPos(playerid, PlayerInfo[playerid][pPosX], PlayerInfo[playerid][pPosY], z);
+    if (z > 20.0) return SendMsg(playerid, COLOR_RED, "Anda harus dekat air."), 1;
+    ApplyAnimation(playerid, "SAMP", "fishing", 4.1, 0, 1, 1, 1, 0, 1);
+    SetTimerEx("OnFishComplete", 10000, false, "i", playerid);
+    SendMsg(playerid, COLOR_GREEN, "Memancing... tunggu 10 detik.");
+    return 1;
+}
+
+forward OnFishComplete(playerid);
+public OnFishComplete(playerid)
+{
+    if (!IsPlayerConnected(playerid)) return 1;
+    ClearAnimations(playerid);
+    new fish_type = random(5);
+    new fish_names[][] = {"Lele", "Nila", "Gurame", "Mas", "Tuna"};
+    new price = 500 + random(2000);
+    PlayerInfo[playerid][pCash] += price;
+    SendFmt(playerid, COLOR_GREEN, "Anda mendapat ikan %s! Dijual $%d.", fish_names[fish_type], price);
+    return 1;
+}
+
+/* =====================================================================
+ *  RENT VEHICLE
+ * =====================================================================*/
+CMD:rentcar(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (GetPlayerDistanceFromPoint(playerid, 545.75, -1293.42, 17.24) > 10.0)
+        return SendMsg(playerid, COLOR_RED, "Anda harus di rental kendaraan."), 1;
+    if (PlayerInfo[playerid][pCash] < 5000) return SendMsg(playerid, COLOR_RED, "Sewa $5000. Uang tidak cukup."), 1;
+    PlayerInfo[playerid][pCash] -= 5000;
+    new Float:x, Float:y, Float:z, Float:a;
+    GetPlayerPos(playerid, x, y, z);
+    GetPlayerFacingAngle(playerid, a);
+    new vid = CreateVehicle(462, x + 2.0, y, z, a, 1, 1, 3600);
+    PutPlayerInVehicle(playerid, vid, 0);
+    SendMsg(playerid, COLOR_GREEN, "Anda menyewa kendaraan selama 1 jam ($5000).");
+    return 1;
+}
+
+/* =====================================================================
+ *  CLOTHING SHOP
+ * =====================================================================*/
+CMD:buyclothes(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (GetPlayerInterior(playerid) != 5 && GetPlayerInterior(playerid) != 17)
+        return SendMsg(playerid, COLOR_RED, "Anda harus di toko baju."), 1;
+    if (PlayerInfo[playerid][pCash] < 1000) return SendMsg(playerid, COLOR_RED, "Baju $1000. Uang tidak cukup."), 1;
+    PlayerInfo[playerid][pCash] -= 1000;
+    new skin = 1 + random(299);
+    if (skin == 0) skin = 230;
+    PlayerInfo[playerid][pSkin] = skin;
+    SetPlayerSkin(playerid, skin);
+    SendFmt(playerid, COLOR_GREEN, "Anda membeli baju baru! Skin: %d", skin);
+    return 1;
+}
+
+/* =====================================================================
+ *  EAT AT RESTAURANT
+ * =====================================================================*/
+CMD:makanresto(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (GetPlayerInterior(playerid) != 5 && GetPlayerInterior(playerid) != 10 && GetPlayerInterior(playerid) != 11)
+        return SendMsg(playerid, COLOR_RED, "Anda harus di restoran."), 1;
+    if (PlayerInfo[playerid][pCash] < 2000) return SendMsg(playerid, COLOR_RED, "Makan $2000. Uang tidak cukup."), 1;
+    PlayerInfo[playerid][pCash] -= 2000;
+    PlayerInfo[playerid][pHunger] = 100.0;
+    PlayerInfo[playerid][pThirst] = 100.0;
+    PlayerInfo[playerid][pHealth] = 100.0;
+    SetPlayerHealth(playerid, 100.0);
+    SendMsg(playerid, COLOR_GREEN, "Anda makan di restoran. Hunger, Thirst, Health penuh!");
+    return 1;
+}
+
+/* =====================================================================
+ *  DRUG SYSTEM
+ * =====================================================================*/
+CMD:usedrug(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pCash] < 500) return SendMsg(playerid, COLOR_RED, "Butuh $500."), 1;
+    PlayerInfo[playerid][pCash] -= 500;
+    SetPlayerHealth(playerid, 100.0);
+    SetPlayerArmour(playerid, 50.0);
+    SetPlayerDrunkLevel(playerid, 3000);
+    SetTimerEx("OnDrugWearOff", 30000, false, "i", playerid);
+    SendMsg(playerid, COLOR_GREEN, "Anda menggunakan obat. Health + Armor + Drunk.");
+    return 1;
+}
+
+forward OnDrugWearOff(playerid);
+public OnDrugWearOff(playerid)
+{
+    if (!IsPlayerConnected(playerid)) return 1;
+    SetPlayerDrunkLevel(playerid, 0);
+    SendMsg(playerid, COLOR_YELLOW, "Efek obat hilang.");
+    return 1;
+}
+
+/* =====================================================================
+ *  ADMIN TELEPORT
+ * =====================================================================*/
+CMD:tp(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2) return SendMsg(playerid, COLOR_RED, "Butuh admin level 2."), 1;
+    new Float:x, Float:y, Float:z;
+    if (sscanf(params, "fff", x, y, z))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /tp [x] [y] [z]"), 1;
+    SetPlayerPos(playerid, x, y, z);
+    SendMsg(playerid, COLOR_GREEN, "Teleport.");
+    return 1;
+}
+
+CMD:tppos(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2) return 1;
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+    SendFmt(playerid, COLOR_YELLOW, "Posisi Anda: X=%.2f Y=%.2f Z=%.2f", x, y, z);
+    return 1;
+}
+
+/* =====================================================================
+ *  MAIN MENU & FULL COMMAND LIST
+ * =====================================================================*/
+CMD:menu(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new str[512];
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}=== Menu Inferno RP ===\n\n", sizeof(str));
+    strcat(str, "1. {00FF00}Stats Saya{FFFFFF}\n", sizeof(str));
+    strcat(str, "2. {00FF00}Help / Commands{FFFFFF}\n", sizeof(str));
+    strcat(str, "3. {00FF00}Pekerjaan{FFFFFF}\n", sizeof(str));
+    strcat(str, "4. {00FF00}Dokumen{FFFFFF}\n", sizeof(str));
+    strcat(str, "5. {00FF00}Handphone{FFFFFF}\n", sizeof(str));
+    strcat(str, "6. {00FF00}Bank / ATM{FFFFFF}\n", sizeof(str));
+    strcat(str, "7. {00FF00}GPS Navigation{FFFFFF}\n", sizeof(str));
+    strcat(str, "8. {00FF00}Admin Help{FFFFFF}\n", sizeof(str));
+    ShowPlayerDialog(playerid, 1101, DIALOG_STYLE_LIST, "{00FF00}Menu Utama", str, "Pilih", "Tutup");
+    return 1;
+}
+
+CMD:commands(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    new str[1024];
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}=== SEMUA COMMAND ===\n\n", sizeof(str));
+    strcat(str, "{00FF00}Umum:{FFFFFF} /stats /help /menu /commands\n\n", sizeof(str));
+    strcat(str, "{00FF00}Survival:{FFFFFF} /tidur /bangun /makan /minum /obat\n", sizeof(str));
+    strcat(str, " /makanresto /usedrug /fish\n\n", sizeof(str));
+    strcat(str, "{00FF00}Rumah:{FFFFFF} /buyhouse /sellhouse /enterhouse\n", sizeof(str));
+    strcat(str, " /exithouse /lockhouse\n\n", sizeof(str));
+    strcat(str, "{00FF00}Bisnis:{FFFFFF} /buybiz /sellbiz /bizmenu\n\n", sizeof(str));
+    strcat(str, "{00FF00}Kendaraan:{FFFFFF} /buycar /lockcar /park /engine\n", sizeof(str));
+    strcat(str, " /mycars /rentcar /isibensin /cekbensin\n\n", sizeof(str));
+    strcat(str, "{00FF00}Pekerjaan:{FFFFFF} /kerja /quitjob /mulaikerja\n", sizeof(str));
+    strcat(str, " /selesaikerja /repair\n\n", sizeof(str));
+    strcat(str, "{00FF00}HP:{FFFFFF} /hp /sms /call /angkat /hangup /topup\n", sizeof(str));
+    strcat(str, " /addcontact /contacts\n\n", sizeof(str));
+    strcat(str, "{00FF00}Bank:{FFFFFF} /bank /atm /transfer /kredit /bayarkredit\n\n", sizeof(str));
+    strcat(str, "{00FF00}Dokumen:{FFFFFF} /dokumen /urusdokumen\n\n", sizeof(str));
+    strcat(str, "{00FF00}Medis:{FFFFFF} /rawatinap /ambulans /resep\n\n", sizeof(str));
+    strcat(str, "{00FF00}Polisi:{FFFFFF} /duty /ticket /cuff /uncuff\n", sizeof(str));
+    strcat(str, " /sidang /putusan /jaksa /pengacara\n\n", sizeof(str));
+    strcat(str, "{00FF00}Gov:{FFFFFF} /pemerintah /daftarpilkada /pilkada\n\n", sizeof(str));
+    strcat(str, "{00FF00}Lainnya:{FFFFFF} /gps /beli /buyclothes\n", sizeof(str));
+    strcat(str, " /washmoney /pajak /creategang\n\n", sizeof(str));
+    strcat(str, "{00FF00}Admin:{FFFFFF} /ahelp /a /heal /armor /goto\n", sizeof(str));
+    strcat(str, " /gethere /freeze /slap /kick /ban\n", sizeof(str));
+    strcat(str, " /sethp /setcash /setskin /setlevel\n", sizeof(str));
+    strcat(str, " /setadmin /givemoney /tp /tppos\n", sizeof(str));
+    ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Semua Command", str, "Tutup", "");
+    return 1;
+}
+
+
 /* =====================================================================
  *  ADMIN COMMANDS
  * =====================================================================*/
@@ -3082,6 +3921,33 @@ CMD:setpnssalary(playerid, params[])
     SendFmt(playerid, COLOR_GREEN, "Gaji PNS di-set ke $%d.", amount);
     return 1;
 }
+
+/* =====================================================================
+ *  OnPlayerEnterCheckpoint - Job Missions
+ * =====================================================================*/
+public OnPlayerEnterCheckpoint(playerid)
+{
+    if (gJobMission[playerid] == 1 || gJobMission[playerid] == 2)
+    {
+        DisablePlayerCheckpoint(playerid);
+        new reward = 0;
+        if (gJobMission[playerid] == 1) reward = 3000;
+        else reward = 2000;
+        PlayerInfo[playerid][pCash] += reward;
+        PlayerInfo[playerid][pExp] += 2;
+        gJobMission[playerid] = 0;
+        RestoreOrigSkin(playerid);
+        SendFmt(playerid, COLOR_GREEN, "Misi selesai! +$%d dan +2 EXP.", reward);
+    }
+    return 1;
+}
+
+/* =====================================================================
+ *  GPS & Menu Dialog Handlers
+ * =====================================================================*/
+/* Dialog 1100 = GPS, 1101 = Menu */
+forward OnGPSDialog(playerid, response, listitem);
+forward OnMenuDialog(playerid, response, listitem);
 
 /* =====================================================================
  *  OnPlayerDeath
