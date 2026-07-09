@@ -992,8 +992,13 @@ public OnSurvivalDecay()
         /* Stamina naik jika diam */
         if (GetPlayerState(i) != PLAYER_STATE_ONFOOT)
             PlayerInfo[i][pStamina] += 2.0;
-        else if (!(GetPlayerKeys(i) & KEY_SPRINT))
-            PlayerInfo[i][pStamina] += 2.0;
+        else
+        {
+            new keys, ud, lr;
+            GetPlayerKeys(i, keys, ud, lr);
+            if (!(keys & KEY_SPRINT))
+                PlayerInfo[i][pStamina] += 2.0;
+        }
         if (PlayerInfo[i][pStamina] > 100.0) PlayerInfo[i][pStamina] = 100.0;
 
         /* Efek hunger/thirst/sleep rendah */
@@ -1050,7 +1055,9 @@ public OnWeatherChange()
     gCurrentWeather = weathers[random(sizeof(weathers))];
     SetWeather(gCurrentWeather);
     if (gCurrentWeather == 8)
+    {
         new _sf4[512]; format(_sf4, sizeof(_sf4),  "[CUACA] Hujan turun! Waspadai sakit flu."); SendClientMessageToAll(COLOR_BLUE, _sf4);
+    }
     return 1;
 }
 
