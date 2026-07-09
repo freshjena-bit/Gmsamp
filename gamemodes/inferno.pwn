@@ -313,6 +313,50 @@ new gTotalBusinesses = 0;
 new gTotalFuelStations = 0;
 new gInteriorCooldown[MAX_PLAYERS];
 
+/* ---------- TextDraw HUD Variables ---------- */
+new Text:TD_Box;
+new Text:TD_Health;
+new Text:TD_Armor;
+new Text:TD_Hunger;
+new Text:TD_Thirst;
+new Text:TD_Sleep;
+new Text:TD_Stamina;
+new Text:TD_Cash;
+new Text:TD_Bank;
+new Text:TD_Level;
+new Text:TD_Job;
+new Text:TD_Phone;
+new Text:TD_Clock;
+new Text:TD_ServerName;
+new PlayerText:TD_PHealth[MAX_PLAYERS];
+new PlayerText:TD_PArmor[MAX_PLAYERS];
+new PlayerText:TD_PHunger[MAX_PLAYERS];
+new PlayerText:TD_PThirst[MAX_PLAYERS];
+new PlayerText:TD_PSleep[MAX_PLAYERS];
+new PlayerText:TD_PStamina[MAX_PLAYERS];
+new gHUDTimer;
+new gPlayerOrigSkin[MAX_PLAYERS];
+
+/* ---------- Job skin mapping ---------- */
+new const gJobSkins[] = {
+    0,    // Job 0: No job
+    255,  // Job 1: Trucker
+    61,   // Job 2: Taxi Driver
+    50,   // Job 3: Mechanic
+    17,   // Job 4: PNS
+    70,   // Job 5: Dokter
+    280   // Job 6: Polisi
+};
+new const gJobNames[][] = {
+    "Tidak Bekerja",
+    "Trucker",
+    "Taxi Driver",
+    "Mechanic",
+    "PNS",
+    "Dokter",
+    "Polisi"
+};
+
 /* ---------- Pasal KUHP ---------- */
 enum E_ARTICLE
 {
@@ -387,7 +431,7 @@ stock ResetPlayerData(playerid)
     PlayerInfo[playerid][pLevel] = 1;
     PlayerInfo[playerid][pExp] = 0;
     PlayerInfo[playerid][pAdminLevel] = 0;
-    PlayerInfo[playerid][pSkin] = 0;
+    PlayerInfo[playerid][pSkin] = 230;
     PlayerInfo[playerid][pAge] = 17;
     PlayerInfo[playerid][pGender] = 0;
     PlayerInfo[playerid][pHealth] = 100.0;
@@ -492,6 +536,269 @@ stock CreateInteriorPoint(const label[],
 }
 
 /* =====================================================================
+ *  TEXTDRAW HUD SYSTEM
+ * =====================================================================*/
+stock CreateHUDTextDraws()
+{
+    /* Background box (bottom left) */
+    TD_Box = TextDrawCreate(20.0, 160.0, "_");
+    TextDrawUseBox(TD_Box, 1);
+    TextDrawBoxColor(TD_Box, 0x000000AA);
+    TextDrawTextSize(TD_Box, 180.0, 0.0);
+    TextDrawLetterSize(TD_Box, 0.5, 9.5);
+    TextDrawSetShadow(TD_Box, 0);
+
+    /* Server name header */
+    TD_ServerName = TextDrawCreate(25.0, 162.0, "~g~Inferno RP~w~ v2.0");
+    TextDrawLetterSize(TD_ServerName, 0.25, 1.0);
+    TextDrawSetShadow(TD_ServerName, 1);
+
+    /* Labels */
+    TD_Health = TextDrawCreate(25.0, 178.0, "~r~Health:");
+    TextDrawLetterSize(TD_Health, 0.20, 0.9);
+    TextDrawSetShadow(TD_Health, 1);
+
+    TD_Armor = TextDrawCreate(25.0, 190.0, "~b~Armor:");
+    TextDrawLetterSize(TD_Armor, 0.20, 0.9);
+    TextDrawSetShadow(TD_Armor, 1);
+
+    TD_Hunger = TextDrawCreate(25.0, 202.0, "~o~Hunger:");
+    TextDrawLetterSize(TD_Hunger, 0.20, 0.9);
+    TextDrawSetShadow(TD_Hunger, 1);
+
+    TD_Thirst = TextDrawCreate(25.0, 214.0, "~b~Thirst:");
+    TextDrawLetterSize(TD_Thirst, 0.20, 0.9);
+    TextDrawSetShadow(TD_Thirst, 1);
+
+    TD_Sleep = TextDrawCreate(25.0, 226.0, "~p~Sleep:");
+    TextDrawLetterSize(TD_Sleep, 0.20, 0.9);
+    TextDrawSetShadow(TD_Sleep, 1);
+
+    TD_Stamina = TextDrawCreate(25.0, 238.0, "~g~Stamina:");
+    TextDrawLetterSize(TD_Stamina, 0.20, 0.9);
+    TextDrawSetShadow(TD_Stamina, 1);
+
+    /* Right side info */
+    TD_Cash = TextDrawCreate(500.0, 162.0, "~g~Cash: $0");
+    TextDrawLetterSize(TD_Cash, 0.22, 0.9);
+    TextDrawSetShadow(TD_Cash, 1);
+
+    TD_Bank = TextDrawCreate(500.0, 174.0, "~b~Bank: $0");
+    TextDrawLetterSize(TD_Bank, 0.22, 0.9);
+    TextDrawSetShadow(TD_Bank, 1);
+
+    TD_Level = TextDrawCreate(500.0, 186.0, "~w~Level: 1");
+    TextDrawLetterSize(TD_Level, 0.22, 0.9);
+    TextDrawSetShadow(TD_Level, 1);
+
+    TD_Job = TextDrawCreate(500.0, 198.0, "~w~Job: Tidak Bekerja");
+    TextDrawLetterSize(TD_Job, 0.22, 0.9);
+    TextDrawSetShadow(TD_Job, 1);
+
+    TD_Phone = TextDrawCreate(500.0, 210.0, "~w~HP: - | Pulsa: $0");
+    TextDrawLetterSize(TD_Phone, 0.22, 0.9);
+    TextDrawSetShadow(TD_Phone, 1);
+
+    TD_Clock = TextDrawCreate(580.0, 5.0, "00:00");
+    TextDrawLetterSize(TD_Clock, 0.35, 1.2);
+    TextDrawSetShadow(TD_Clock, 1);
+
+    print("[InfernoRP] TextDraw HUD created.");
+}
+
+stock CreatePlayerHUD(playerid)
+{
+    /* Player-specific bars (progress bar style) */
+    TD_PHealth[playerid] = CreatePlayerTextDraw(playerid, 80.0, 178.0, "100");
+    PlayerTextDrawLetterSize(playerid, TD_PHealth[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PHealth[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PHealth[playerid], 1);
+
+    TD_PArmor[playerid] = CreatePlayerTextDraw(playerid, 80.0, 190.0, "0");
+    PlayerTextDrawLetterSize(playerid, TD_PArmor[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PArmor[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PArmor[playerid], 1);
+
+    TD_PHunger[playerid] = CreatePlayerTextDraw(playerid, 80.0, 202.0, "100");
+    PlayerTextDrawLetterSize(playerid, TD_PHunger[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PHunger[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PHunger[playerid], 1);
+
+    TD_PThirst[playerid] = CreatePlayerTextDraw(playerid, 80.0, 214.0, "100");
+    PlayerTextDrawLetterSize(playerid, TD_PThirst[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PThirst[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PThirst[playerid], 1);
+
+    TD_PSleep[playerid] = CreatePlayerTextDraw(playerid, 80.0, 226.0, "100");
+    PlayerTextDrawLetterSize(playerid, TD_PSleep[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PSleep[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PSleep[playerid], 1);
+
+    TD_PStamina[playerid] = CreatePlayerTextDraw(playerid, 80.0, 238.0, "100");
+    PlayerTextDrawLetterSize(playerid, TD_PStamina[playerid], 0.18, 0.85);
+    PlayerTextDrawColor(playerid, TD_PStamina[playerid], 0xFFFFFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PStamina[playerid], 1);
+}
+
+stock ShowPlayerHUD(playerid)
+{
+    TextDrawShowForPlayer(playerid, TD_Box);
+    TextDrawShowForPlayer(playerid, TD_ServerName);
+    TextDrawShowForPlayer(playerid, TD_Health);
+    TextDrawShowForPlayer(playerid, TD_Armor);
+    TextDrawShowForPlayer(playerid, TD_Hunger);
+    TextDrawShowForPlayer(playerid, TD_Thirst);
+    TextDrawShowForPlayer(playerid, TD_Sleep);
+    TextDrawShowForPlayer(playerid, TD_Stamina);
+    TextDrawShowForPlayer(playerid, TD_Cash);
+    TextDrawShowForPlayer(playerid, TD_Bank);
+    TextDrawShowForPlayer(playerid, TD_Level);
+    TextDrawShowForPlayer(playerid, TD_Job);
+    TextDrawShowForPlayer(playerid, TD_Phone);
+    TextDrawShowForPlayer(playerid, TD_Clock);
+    PlayerTextDrawShow(playerid, TD_PHealth[playerid]);
+    PlayerTextDrawShow(playerid, TD_PArmor[playerid]);
+    PlayerTextDrawShow(playerid, TD_PHunger[playerid]);
+    PlayerTextDrawShow(playerid, TD_PThirst[playerid]);
+    PlayerTextDrawShow(playerid, TD_PSleep[playerid]);
+    PlayerTextDrawShow(playerid, TD_PStamina[playerid]);
+}
+
+stock HidePlayerHUD(playerid)
+{
+    TextDrawHideForPlayer(playerid, TD_Box);
+    TextDrawHideForPlayer(playerid, TD_ServerName);
+    TextDrawHideForPlayer(playerid, TD_Health);
+    TextDrawHideForPlayer(playerid, TD_Armor);
+    TextDrawHideForPlayer(playerid, TD_Hunger);
+    TextDrawHideForPlayer(playerid, TD_Thirst);
+    TextDrawHideForPlayer(playerid, TD_Sleep);
+    TextDrawHideForPlayer(playerid, TD_Stamina);
+    TextDrawHideForPlayer(playerid, TD_Cash);
+    TextDrawHideForPlayer(playerid, TD_Bank);
+    TextDrawHideForPlayer(playerid, TD_Level);
+    TextDrawHideForPlayer(playerid, TD_Job);
+    TextDrawHideForPlayer(playerid, TD_Phone);
+    TextDrawHideForPlayer(playerid, TD_Clock);
+    PlayerTextDrawHide(playerid, TD_PHealth[playerid]);
+    PlayerTextDrawHide(playerid, TD_PArmor[playerid]);
+    PlayerTextDrawHide(playerid, TD_PHunger[playerid]);
+    PlayerTextDrawHide(playerid, TD_PThirst[playerid]);
+    PlayerTextDrawHide(playerid, TD_PSleep[playerid]);
+    PlayerTextDrawHide(playerid, TD_PStamina[playerid]);
+}
+
+forward OnHUDUpdate();
+public OnHUDUpdate()
+{
+    new str[128];
+    new hour, minute;
+    gettime(hour, minute);
+
+    /* Update clock for all players */
+    format(str, sizeof(str), "%02d:%02d", hour, minute);
+    TextDrawSetString(TD_Clock, str);
+
+    for (new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (!IsPlayerConnected(i)) continue;
+        if (!PlayerInfo[i][pIsLogged] || !PlayerInfo[i][pIsSpawned]) continue;
+
+        /* Update health */
+        GetPlayerHealth(i, PlayerInfo[i][pHealth]);
+        GetPlayerArmour(i, PlayerInfo[i][pArmor]);
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pHealth]);
+        PlayerTextDrawSetString(i, TD_PHealth[i], str);
+
+        /* Update armor */
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pArmor]);
+        PlayerTextDrawSetString(i, TD_PArmor[i], str);
+
+        /* Update hunger */
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pHunger]);
+        PlayerTextDrawSetString(i, TD_PHunger[i], str);
+
+        /* Update thirst */
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pThirst]);
+        PlayerTextDrawSetString(i, TD_PThirst[i], str);
+
+        /* Update sleep */
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pSleep]);
+        PlayerTextDrawSetString(i, TD_PSleep[i], str);
+
+        /* Update stamina */
+        format(str, sizeof(str), "%.0f", PlayerInfo[i][pStamina]);
+        PlayerTextDrawSetString(i, TD_PStamina[i], str);
+
+        /* Update cash */
+        new _sf_hud1[128]; format(_sf_hud1, sizeof(_sf_hud1), "~g~Cash: $%d", PlayerInfo[i][pCash]);
+        TextDrawSetString(TD_Cash, _sf_hud1);
+
+        /* Update bank */
+        new _sf_hud2[128]; format(_sf_hud2, sizeof(_sf_hud2), "~b~Bank: $%d", PlayerInfo[i][pBank]);
+        TextDrawSetString(TD_Bank, _sf_hud2);
+
+        /* Update level */
+        new _sf_hud3[128]; format(_sf_hud3, sizeof(_sf_hud3), "~w~Level: %d (Exp: %d)", PlayerInfo[i][pLevel], PlayerInfo[i][pExp]);
+        TextDrawSetString(TD_Level, _sf_hud3);
+
+        /* Update job */
+        new job_name[32];
+        if (PlayerInfo[i][pJob] >= 0 && PlayerInfo[i][pJob] < sizeof(gJobNames))
+        {
+            job_name[0] = EOS;
+            strcat(job_name, gJobNames[PlayerInfo[i][pJob]], 32);
+        }
+        else
+        {
+            job_name = "Unknown";
+        }
+        new _sf_hud4[128]; format(_sf_hud4, sizeof(_sf_hud4), "~w~Job: %s", job_name);
+        TextDrawSetString(TD_Job, _sf_hud4);
+
+        /* Update phone */
+        new _sf_hud5[128];
+        if (PlayerInfo[i][pPhone] > 0)
+        {
+            format(_sf_hud5, sizeof(_sf_hud5), "~w~HP: %d | Pulsa: $%d", PlayerInfo[i][pPhone], PlayerInfo[i][pPhoneCredit]);
+        }
+        else
+        {
+            _sf_hud5 = "~r~HP: Tidak ada";
+        }
+        TextDrawSetString(TD_Phone, _sf_hud5);
+    }
+    return 1;
+}
+
+/* =====================================================================
+ *  JOB SKIN SYSTEM
+ * =====================================================================*/
+stock ApplyJobSkin(playerid)
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return;
+    new job = PlayerInfo[playerid][pJob];
+    if (job > 0 && job < sizeof(gJobSkins))
+    {
+        gPlayerOrigSkin[playerid] = GetPlayerSkin(playerid);
+        SetPlayerSkin(playerid, gJobSkins[job]);
+        new _sf_skin[128];
+        format(_sf_skin, sizeof(_sf_skin), "~g~Skin berubah ke %s", gJobNames[job]);
+        GameTextForPlayer(playerid, _sf_skin, 2000, 3);
+    }
+}
+
+stock RestoreOrigSkin(playerid)
+{
+    if (gPlayerOrigSkin[playerid] > 0)
+    {
+        SetPlayerSkin(playerid, gPlayerOrigSkin[playerid]);
+        GameTextForPlayer(playerid, "~w~Skin kembali ke asli", 2000, 3);
+        gPlayerOrigSkin[playerid] = 0;
+    }
+}
+
+/* =====================================================================
  *  MAIN
  * =====================================================================*/
 main()
@@ -519,7 +826,14 @@ public OnGameModeInit()
     SetWeather(1);
     SetWorldTime(12);
 
-    AddPlayerClass(0, 1743.20, -1862.05, 13.58, 270.0, 0, 0, 0, 0, 0, 0);
+    AddPlayerClass(230, 1743.20, -1862.05, 13.58, 270.0, 0, 0, 0, 0, 0, 0);
+
+    /* --- Slower running (normal ped anims, not CJ fast run) --- */
+    UsePlayerPedAnims();
+
+    /* --- TextDraw HUD --- */
+    CreateHUDTextDraws();
+    gHUDTimer = SetTimer("OnHUDUpdate", 1000, true);
 
     /* --- Koneksi MySQL --- */
     gSQL = mysql_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB);
@@ -603,6 +917,15 @@ public OnGameModeInit()
     }
 
     /* --- Lokasi penting 3D labels --- */
+    /* Toko 24/7 dekat spawn (untuk beli HP, makanan, dll) */
+    CreateDynamicPickup(1247, 23, 1751.0, -1862.0, 13.5, -1, -1, -1, 10.0);
+    CreateDynamic3DTextLabel("{00FF00}Toko 24/7\n{FFFFFF}/beli\nHP, Makanan, Minuman, Obat", 0x00FF00FF,
+        1751.0, -1862.0, 13.5 + 0.5, 15.0);
+    /* GPS Shop (untuk beli HP + paket data) */
+    CreateDynamicPickup(1247, 23, 1755.0, -1862.0, 13.5, -1, -1, -1, 10.0);
+    CreateDynamic3DTextLabel("{0000FF}GPS & Handphone Shop\n{FFFFFF}/belihp\nBeli HP, Pulsa, Paket Data", 0x0000FFFF,
+        1755.0, -1862.0, 13.5 + 0.5, 15.0);
+
     CreateDynamic3DTextLabel("{00FF00}Balai Kota\n{FFFFFF}/urusdokumen", 0x00FF00FF,
         1480.91, -1771.21, 18.79 + 0.5, 10.0);
     CreateDynamic3DTextLabel("{0000FF}Bank\n{FFFFFF}/bank / /kredit", 0x0000FFFF,
@@ -628,6 +951,7 @@ public OnGameModeExit()
     KillTimer(gSurvivalTimer);
     KillTimer(gWeatherTimer);
     KillTimer(gFuelTimer);
+    KillTimer(gHUDTimer);
     return 1;
 }
 
@@ -654,7 +978,10 @@ public OnPlayerConnect(playerid)
 public OnPlayerDisconnect(playerid, reason)
 {
     if (PlayerInfo[playerid][pIsLogged])
+    {
         SavePlayerData(playerid);
+    }
+    HidePlayerHUD(playerid);
     ResetPlayerData(playerid);
     return 1;
 }
@@ -772,6 +1099,80 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             LoadPlayerData(playerid);
             SpawnPlayer(playerid);
             SendMsg(playerid, COLOR_GREEN, "Login berhasil! Selamat datang di Inferno RP.");
+            return 1;
+        }
+
+        case DIALOG_JOB_MENU:
+        {
+            if (!response) return 1;
+            new job = listitem + 1;
+            PlayerInfo[playerid][pJob] = job;
+            ApplyJobSkin(playerid);
+            new _sf_job[128];
+            format(_sf_job, sizeof(_sf_job), "Anda mulai bekerja sebagai %s. Skin berubah otomatis.", gJobNames[job]);
+            SendMsg(playerid, COLOR_GREEN, _sf_job);
+            return 1;
+        }
+
+        case DIALOG_SHOP_MENU:
+        {
+            if (!response) return 1;
+            switch (listitem)
+            {
+                case 0: /* Makanan */
+                {
+                    if (PlayerInfo[playerid][pCash] < 500) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($500)."), 1;
+                    PlayerInfo[playerid][pCash] -= 500;
+                    PlayerInfo[playerid][pHunger] += 30.0;
+                    if (PlayerInfo[playerid][pHunger] > 100.0) PlayerInfo[playerid][pHunger] = 100.0;
+                    SendMsg(playerid, COLOR_GREEN, "Anda membeli makanan. Hunger +30.");
+                }
+                case 1: /* Minuman */
+                {
+                    if (PlayerInfo[playerid][pCash] < 300) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($300)."), 1;
+                    PlayerInfo[playerid][pCash] -= 300;
+                    PlayerInfo[playerid][pThirst] += 30.0;
+                    if (PlayerInfo[playerid][pThirst] > 100.0) PlayerInfo[playerid][pThirst] = 100.0;
+                    SendMsg(playerid, COLOR_GREEN, "Anda membeli minuman. Thirst +30.");
+                }
+                case 2: /* Obat */
+                {
+                    if (PlayerInfo[playerid][pCash] < 2000) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($2000)."), 1;
+                    PlayerInfo[playerid][pCash] -= 2000;
+                    PlayerInfo[playerid][pSickness] = 0;
+                    PlayerInfo[playerid][pSickTime] = 0;
+                    SetPlayerHealth(playerid, 100.0);
+                    SendMsg(playerid, COLOR_GREEN, "Anda membeli obat. Sembuh total!");
+                }
+                case 3: /* Handphone */
+                {
+                    if (PlayerInfo[playerid][pCash] < 10000) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($10,000)."), 1;
+                    if (PlayerInfo[playerid][pPhone] > 0) return SendMsg(playerid, COLOR_RED, "Anda sudah punya HP."), 1;
+                    PlayerInfo[playerid][pCash] -= 10000;
+                    PlayerInfo[playerid][pPhone] = 1000 + random(9000);
+                    PlayerInfo[playerid][pPhoneCredit] = 5000;
+                    new _sf_hp[128]; format(_sf_hp, sizeof(_sf_hp), "Anda membeli HP! Nomor: %d. Pulsa: $5000.", PlayerInfo[playerid][pPhone]);
+                    SendClientMessage(playerid, COLOR_GREEN, _sf_hp);
+                }
+                case 4: /* Pulsa $5000 */
+                {
+                    if (PlayerInfo[playerid][pCash] < 5000) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($5,000)."), 1;
+                    if (PlayerInfo[playerid][pPhone] == 0) return SendMsg(playerid, COLOR_RED, "Beli HP dulu."), 1;
+                    PlayerInfo[playerid][pCash] -= 5000;
+                    PlayerInfo[playerid][pPhoneCredit] += 5000;
+                    new _sf_pulsa[128]; format(_sf_pulsa, sizeof(_sf_pulsa), "Pulsa +$5000. Total: $%d.", PlayerInfo[playerid][pPhoneCredit]);
+                    SendClientMessage(playerid, COLOR_GREEN, _sf_pulsa);
+                }
+                case 5: /* Paket Data 1GB */
+                {
+                    if (PlayerInfo[playerid][pCash] < 3000) return SendMsg(playerid, COLOR_RED, "Uang tidak cukup ($3,000)."), 1;
+                    if (PlayerInfo[playerid][pPhone] == 0) return SendMsg(playerid, COLOR_RED, "Beli HP dulu."), 1;
+                    PlayerInfo[playerid][pCash] -= 3000;
+                    PlayerInfo[playerid][pPhoneData] += 1024;
+                    new _sf_data[128]; format(_sf_data, sizeof(_sf_data), "Paket Data +1GB. Total: %d MB.", PlayerInfo[playerid][pPhoneData]);
+                    SendClientMessage(playerid, COLOR_GREEN, _sf_data);
+                }
+            }
             return 1;
         }
     }
@@ -939,6 +1340,10 @@ public OnPlayerSpawn(playerid)
     GivePlayerMoney(playerid, PlayerInfo[playerid][pCash] - GetPlayerMoney(playerid));
     SetPlayerColor(playerid, COLOR_GREY);
     PlayerInfo[playerid][pIsSpawned] = true;
+
+    /* --- Show TextDraw HUD --- */
+    CreatePlayerHUD(playerid);
+    ShowPlayerHUD(playerid);
 
     new _sf3[512]; format(_sf3, sizeof(_sf3),  "Selamat datang, %s! Level: %d | Cash: $%d | Bank: $%d", 
         PlayerInfo[playerid][pName],  PlayerInfo[playerid][pLevel], 
@@ -1986,7 +2391,8 @@ CMD:quitjob(playerid, params[])
     if (PlayerInfo[playerid][pJob] == 0)
         return SendMsg(playerid, COLOR_RED, "Anda tidak punya pekerjaan."), 1;
     PlayerInfo[playerid][pJob] = 0;
-    SendMsg(playerid, COLOR_GREEN, "Anda berhenti dari pekerjaan.");
+    RestoreOrigSkin(playerid);
+    SendMsg(playerid, COLOR_GREEN, "Anda berhenti dari pekerjaan. Skin kembali ke asli.");
     return 1;
 }
 
