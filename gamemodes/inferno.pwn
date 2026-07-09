@@ -3183,7 +3183,6 @@ CMD:gps(playerid, params[])
 /* =====================================================================
  *  SPEEDOMETER (TextDraw)
  * =====================================================================*/
-new PlayerText:TD_Speedo[MAX_PLAYERS];
 
 stock CreateSpeedo(playerid)
 {
