@@ -1,0 +1,16 @@
+# Compiled AMX
+gamemodes/*.amx
+filterscripts/*.amx
+npcmodes/*.amx
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
