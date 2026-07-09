@@ -11,7 +11,7 @@
  *    - Dokumen: KTP, KK, SIM, STNK, BPKB, Paspor, Surat Izin Senjata
  *    - Handphone: Nomor, SMS, Call, Kontak, Pulsa, Paket Data
  *    - Bahan Bakar: SPBU, konsumsi BBM per km, jenis bensin
- *    - Sistem Pajak: PPh 10%, Pajak Properti, PPN belanja
+ *    - Sistem Pajak: PPh 10 persen, Pajak Properti, PPN belanja
  *    - Cuaca & Sakit: Hujan, flu, demam, diare, infeksi
  *    - Pekerjaan Misi Nyata: Trucker, Taxi, Mechanic dengan misi
  *    - Polisi & Sidang: Pengadilan dengan Hakim, Jaksa, Pengacara, KUHP
@@ -298,7 +298,7 @@ enum E_GOV_DATA
 new GovCandidate[MAX_GOV_CANDIDATES][E_GOV_DATA];
 new gElectionActive = 0;
 new gHasVoted[MAX_PLAYERS];
-new gTaxRate = 10;         // PPh 10%
+new gTaxRate = 10;         // PPh 10 persen
 new gPNSSalary = 15000;
 
 /* ---------- Global vars ---------- */
@@ -359,7 +359,7 @@ stock SendMsg(playerid, color, const text[])
 }
 
 /*
- * SendFmt / SendAllFmt — format pesan lalu kirim.
+ * SendFmt / SendAllFmt - format pesan lalu kirim.
  * Pawn's format() mendukung variadic args, jadi ini sederhana.
  */
 stock SendFmt(playerid, color, const fmat[], {Float, _}:...)
@@ -940,7 +940,7 @@ public OnPlayerSpawn(playerid)
 }
 
 /* =====================================================================
- *  OnPlayerKeyStateChange — tekan Y untuk masuk/keluar interior
+ *  OnPlayerKeyStateChange - tekan Y untuk masuk/keluar interior
  * =====================================================================*/
 public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 {
@@ -2002,7 +2002,7 @@ CMD:beli(playerid, params[])
 }
 
 /* =====================================================================
- *  OnDialogResponse — Handle shop, job, docs, bank, vote dialogs
+ *  OnDialogResponse - Handle shop, job, docs, bank, vote dialogs
  * =====================================================================*/
 /* (OnDialogResponse already defined above, this section adds more cases) */
 
