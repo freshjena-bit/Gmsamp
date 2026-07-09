@@ -29,6 +29,15 @@
 #include <sscanf2>
 #include <a_mysql>
 #include <zcmd>
+
+/* SendFmt macro - format + SendClientMessage in one call.
+   Usage: SendFmt(playerid, color, "fmt %s %d", str, int); */
+#define SendFmt(%0,%1,%2) \\
+    do { \\
+        new _sfmt_str[256]; \\
+        format(_sfmt_str, sizeof(_sfmt_str), %2); \\
+        SendClientMessage(%0, %1, _sfmt_str); \\
+    } while(0)
 // #include <foreach>  // Replaced with for loops
 
 /* =====================================================================
@@ -869,6 +878,9 @@ public OnGameModeInit()
         286.15, -40.50, 1001.52, 1, 0);
     CreateInteriorPoint("Toko 24/7 LS", 1352.50, -1755.50, 13.50, 0, 0,
         -25.90, -185.80, 1003.55, 17, 0);
+    /* Toko dekat spawn - masuk ke interior 24/7 */
+    CreateInteriorPoint("Toko Spawn", 1751.0, -1862.0, 13.5, 0, 0,
+        -25.90, -185.80, 1003.55, 17, 0);
     CreateInteriorPoint("Pizza Stack", 1174.00, -1303.00, 14.10, 0, 0,
         374.00, -117.40, 1001.49, 5, 0);
     CreateInteriorPoint("Bar LS", 2330.00, -1075.50, 45.00, 0, 0,
@@ -917,14 +929,10 @@ public OnGameModeInit()
     }
 
     /* --- Lokasi penting 3D labels --- */
-    /* Toko 24/7 dekat spawn (untuk beli HP, makanan, dll) */
+    /* Toko dekat spawn - masuk ke interior 24/7, tekan Y */
     CreateDynamicPickup(1247, 23, 1751.0, -1862.0, 13.5, -1, -1, -1, 10.0);
-    CreateDynamic3DTextLabel("{00FF00}Toko 24/7\n{FFFFFF}/beli\nHP, Makanan, Minuman, Obat", 0x00FF00FF,
+    CreateDynamic3DTextLabel("{00FF00}Toko 24/7\n{FFFFFF}Tekan Y untuk masuk\n/beli di dalam", 0x00FF00FF,
         1751.0, -1862.0, 13.5 + 0.5, 15.0);
-    /* GPS Shop (untuk beli HP + paket data) */
-    CreateDynamicPickup(1247, 23, 1755.0, -1862.0, 13.5, -1, -1, -1, 10.0);
-    CreateDynamic3DTextLabel("{0000FF}GPS & Handphone Shop\n{FFFFFF}/belihp\nBeli HP, Pulsa, Paket Data", 0x0000FFFF,
-        1755.0, -1862.0, 13.5 + 0.5, 15.0);
 
     CreateDynamic3DTextLabel("{00FF00}Balai Kota\n{FFFFFF}/urusdokumen", 0x00FF00FF,
         1480.91, -1771.21, 18.79 + 0.5, 10.0);
@@ -2402,6 +2410,12 @@ CMD:quitjob(playerid, params[])
 CMD:beli(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    /* Cek apakah player di dalam toko (interior 17 = 24/7 shop) */
+    if (GetPlayerInterior(playerid) != 17 && GetPlayerInterior(playerid) != 1 && GetPlayerInterior(playerid) != 5 && GetPlayerInterior(playerid) != 11)
+    {
+        SendMsg(playerid, COLOR_RED, "Anda harus berada di dalam toko untuk beli. Cari toko dan tekan Y untuk masuk.");
+        return 1;
+    }
     new str[512];
     format(str, sizeof(str),
         "{FFFFFF}Toko Inferno RP:\n\n1. Makanan - $500 (Hunger +30)\n2. Minuman - $300 (Thirst +30)\n3. Obat - $2,000 (Sembuh)\n4. Handphone - $10,000\n5. Pulsa $5,000\n6. Paket Data 1GB - $3,000");
@@ -2497,6 +2511,527 @@ public OnElectionEnd()
     if (GovCandidate[winner][gType] == 1) win_type_s = "Gubernur"; else win_type_s = "Walikota";
     format(_sf27, sizeof(_sf27), "[PEMILU] %s terpilih sebagai %s!", GovCandidate[winner][gPlayerName], win_type_s);
     SendClientMessageToAll(COLOR_GREEN, _sf27);
+    return 1;
+}
+
+/* =====================================================================
+ *  ADMIN COMMANDS
+ * =====================================================================*/
+
+/* --- /ahelp - tampilkan semua command admin --- */
+CMD:ahelp(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 1)
+        return SendMsg(playerid, COLOR_RED, "Anda bukan admin."), 1;
+
+    new str[1024];
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}=== Admin Commands ===\n\n", sizeof(str));
+    strcat(str, "{00FF00}Level 1 (Helper):{FFFFFF}\n", sizeof(str));
+    strcat(str, "/ahelp /a (admin chat) /heal /armor /goto\n\n", sizeof(str));
+    strcat(str, "{00FF00}Level 2 (Mod):{FFFFFF}\n", sizeof(str));
+    strcat(str, "/gethere /freeze /unfreeze /mute /unmute\n", sizeof(str));
+    strcat(str, "/slap /warn\n\n", sizeof(str));
+    strcat(str, "{00FF00}Level 3 (Admin):{FFFFFF}\n", sizeof(str));
+    strcat(str, "/kick /sethp /setarmor /setcash /setbank\n", sizeof(str));
+    strcat(str, "/setskin /setlevel /setjob /setfaction\n\n", sizeof(str));
+    strcat(str, "{00FF00}Level 4 (Lead Admin):{FFFFFF}\n", sizeof(str));
+    strcat(str, "/ban /unban /jail /unjail /respawnall\n", sizeof(str));
+    strcat(str, "/settime /setweather /announce\n\n", sizeof(str));
+    strcat(str, "{00FF00}Level 5 (Owner):{FFFFFF}\n", sizeof(str));
+    strcat(str, "/setadmin /giveweapon /givemoney\n", sizeof(str));
+    strcat(str, "/settax /setpnssalary\n", sizeof(str));
+    ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Admin Help", str, "Tutup", "");
+    return 1;
+}
+
+/* --- /a [text] - admin chat --- */
+CMD:a(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 1)
+        return SendMsg(playerid, COLOR_RED, "Anda bukan admin."), 1;
+    if (isnull(params))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /a [pesan]"), 1;
+
+    new _sf_a[256];
+    format(_sf_a, sizeof(_sf_a), "[ADMIN] %s: %s", PlayerInfo[playerid][pName], params);
+    for (new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (IsPlayerConnected(i) && PlayerInfo[i][pIsLogged] && PlayerInfo[i][pAdminLevel] >= 1)
+            SendClientMessage(i, COLOR_PURPLE, _sf_a);
+    }
+    return 1;
+}
+
+/* --- /heal [playerid] --- */
+CMD:heal(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 1)
+        return SendMsg(playerid, COLOR_RED, "Anda bukan admin."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /heal [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    SetPlayerHealth(targetid, 100.0);
+    SendFmt(playerid, COLOR_GREEN, "Anda menyembuhkan %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /armor [playerid] --- */
+CMD:armor(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 1)
+        return SendMsg(playerid, COLOR_RED, "Anda bukan admin."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /armor [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    SetPlayerArmour(targetid, 100.0);
+    SendFmt(playerid, COLOR_GREEN, "Anda memberi armor ke %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /goto [playerid] --- */
+CMD:goto(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 1)
+        return SendMsg(playerid, COLOR_RED, "Anda bukan admin."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /goto [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(targetid, x, y, z);
+    SetPlayerPos(playerid, x + 1.0, y + 1.0, z);
+    SetPlayerInterior(playerid, GetPlayerInterior(targetid));
+    SetPlayerVirtualWorld(playerid, GetPlayerVirtualWorld(targetid));
+    SendFmt(playerid, COLOR_GREEN, "Teleport ke %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /gethere [playerid] --- */
+CMD:gethere(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 2."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /gethere [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+    SetPlayerPos(targetid, x + 1.0, y + 1.0, z);
+    SetPlayerInterior(targetid, GetPlayerInterior(playerid));
+    SetPlayerVirtualWorld(targetid, GetPlayerVirtualWorld(playerid));
+    SendFmt(playerid, COLOR_GREEN, "Anda memanggil %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /freeze [playerid] --- */
+CMD:freeze(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 2."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /freeze [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    TogglePlayerControllable(targetid, false);
+    SendFmt(playerid, COLOR_GREEN, "Anda membekukan %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /unfreeze [playerid] --- */
+CMD:unfreeze(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 2."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /unfreeze [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    TogglePlayerControllable(targetid, true);
+    SendFmt(playerid, COLOR_GREEN, "Anda mencairkan %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /slap [playerid] --- */
+CMD:slap(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 2)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 2."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /slap [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(targetid, x, y, z);
+    SetPlayerPos(targetid, x, y, z + 5.0);
+    SetPlayerHealth(targetid, 50.0);
+    SendFmt(playerid, COLOR_GREEN, "Anda menampar %s.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /kick [playerid] [reason] --- */
+CMD:kick(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, reason[64];
+    if (sscanf(params, "us[64]", targetid, reason))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /kick [playerid] [alasan]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    new _sf_kick[256];
+    format(_sf_kick, sizeof(_sf_kick), "[KICK] %s di-kick oleh %s. Alasan: %s", PlayerInfo[targetid][pName], PlayerInfo[playerid][pName], reason);
+    SendClientMessageToAll(COLOR_RED, _sf_kick);
+    Kick(targetid);
+    return 1;
+}
+
+/* --- /ban [playerid] [reason] --- */
+CMD:ban(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    new targetid, reason[64];
+    if (sscanf(params, "us[64]", targetid, reason))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /ban [playerid] [alasan]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    new _sf_ban[256];
+    format(_sf_ban, sizeof(_sf_ban), "[BAN] %s di-ban oleh %s. Alasan: %s", PlayerInfo[targetid][pName], PlayerInfo[playerid][pName], reason);
+    SendClientMessageToAll(COLOR_RED, _sf_ban);
+    /* Ban IP */
+    new ip[45];
+    GetPlayerIp(targetid, ip, sizeof(ip));
+    new query[128];
+    mysql_format(gSQL, query, sizeof(query), "INSERT INTO `banneds` (`name`, `ip`, `reason`) VALUES ('%e', '%e', '%e')", PlayerInfo[targetid][pName], ip, reason);
+    mysql_tquery(gSQL, query);
+    Ban(targetid);
+    return 1;
+}
+
+/* --- /sethp [playerid] [amount] --- */
+CMD:sethp(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /sethp [playerid] [0-100]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    SetPlayerHealth(targetid, float(amount));
+    SendFmt(playerid, COLOR_GREEN, "HP %s di-set ke %d.", PlayerInfo[targetid][pName], amount);
+    return 1;
+}
+
+/* --- /setarmor [playerid] [amount] --- */
+CMD:setarmor(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setarmor [playerid] [0-100]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    SetPlayerArmour(targetid, float(amount));
+    SendFmt(playerid, COLOR_GREEN, "Armor %s di-set ke %d.", PlayerInfo[targetid][pName], amount);
+    return 1;
+}
+
+/* --- /setcash [playerid] [amount] --- */
+CMD:setcash(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setcash [playerid] [jumlah]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pCash] = amount;
+    GivePlayerMoney(targetid, amount - GetPlayerMoney(targetid));
+    SendFmt(playerid, COLOR_GREEN, "Cash %s di-set ke $%d.", PlayerInfo[targetid][pName], amount);
+    return 1;
+}
+
+/* --- /setbank [playerid] [amount] --- */
+CMD:setbank(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setbank [playerid] [jumlah]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pBank] = amount;
+    SendFmt(playerid, COLOR_GREEN, "Bank %s di-set ke $%d.", PlayerInfo[targetid][pName], amount);
+    return 1;
+}
+
+/* --- /setskin [playerid] [skinid] --- */
+CMD:setskin(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, skinid;
+    if (sscanf(params, "ud", targetid, skinid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setskin [playerid] [skinid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pSkin] = skinid;
+    SetPlayerSkin(targetid, skinid);
+    SendFmt(playerid, COLOR_GREEN, "Skin %s di-set ke %d.", PlayerInfo[targetid][pName], skinid);
+    return 1;
+}
+
+/* --- /setlevel [playerid] [level] --- */
+CMD:setlevel(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, level;
+    if (sscanf(params, "ud", targetid, level))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setlevel [playerid] [level]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pLevel] = level;
+    SendFmt(playerid, COLOR_GREEN, "Level %s di-set ke %d.", PlayerInfo[targetid][pName], level);
+    return 1;
+}
+
+/* --- /setjob [playerid] [jobid] --- */
+CMD:setjob(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, jobid;
+    if (sscanf(params, "ud", targetid, jobid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setjob [playerid] [0-6]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pJob] = jobid;
+    SendFmt(playerid, COLOR_GREEN, "Job %s di-set ke %d.", PlayerInfo[targetid][pName], jobid);
+    return 1;
+}
+
+/* --- /setfaction [playerid] [factionid] --- */
+CMD:setfaction(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 3)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 3."), 1;
+    new targetid, factionid;
+    if (sscanf(params, "ud", targetid, factionid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setfaction [playerid] [0-4]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pFaction] = factionid;
+    SendFmt(playerid, COLOR_GREEN, "Faction %s di-set ke %d.", PlayerInfo[targetid][pName], factionid);
+    return 1;
+}
+
+/* --- /jail [playerid] [time] --- */
+CMD:jail(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    new targetid, time;
+    if (sscanf(params, "ud", targetid, time))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /jail [playerid] [detik]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pJail] = 1;
+    PlayerInfo[targetid][pJailTime] = time;
+    SetPlayerPos(targetid, 264.50, 77.60, 1001.04);
+    SetPlayerInterior(targetid, 6);
+    new _sf_jail[256];
+    format(_sf_jail, sizeof(_sf_jail), "[JAIL] %s di-penjara selama %d detik.", PlayerInfo[targetid][pName], time);
+    SendClientMessageToAll(COLOR_RED, _sf_jail);
+    return 1;
+}
+
+/* --- /unjail [playerid] --- */
+CMD:unjail(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    new targetid;
+    if (sscanf(params, "u", targetid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /unjail [playerid]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pJail] = 0;
+    PlayerInfo[targetid][pJailTime] = 0;
+    SetPlayerPos(targetid, 1743.20, -1862.05, 13.58);
+    SetPlayerInterior(targetid, 0);
+    SendFmt(playerid, COLOR_GREEN, "%s dibebaskan dari penjara.", PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /settime [hour] --- */
+CMD:settime(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    new hour;
+    if (sscanf(params, "d", hour))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /settime [0-23]"), 1;
+    SetWorldTime(hour);
+    SendFmt(playerid, COLOR_GREEN, "Waktu di-set ke %d:00.", hour);
+    return 1;
+}
+
+/* --- /setweather [weatherid] --- */
+CMD:setweather(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    new weatherid;
+    if (sscanf(params, "d", weatherid))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setweather [0-20]"), 1;
+    SetWeather(weatherid);
+    gCurrentWeather = weatherid;
+    SendFmt(playerid, COLOR_GREEN, "Cuaca di-set ke %d.", weatherid);
+    return 1;
+}
+
+/* --- /announce [text] --- */
+CMD:announce(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    if (isnull(params))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /announce [pesan]"), 1;
+    GameTextForAll(params, 5000, 5);
+    return 1;
+}
+
+/* --- /respawnall --- */
+CMD:respawnall(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 4)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 4."), 1;
+    for (new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (IsPlayerConnected(i) && PlayerInfo[i][pIsLogged])
+            SpawnPlayer(i);
+    }
+    SendClientMessageToAll(COLOR_GREEN, "[ADMIN] Semua pemain di-respawn.");
+    return 1;
+}
+
+/* --- /setadmin [playerid] [level] --- */
+CMD:setadmin(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 5)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 5 (Owner)."), 1;
+    new targetid, level;
+    if (sscanf(params, "ud", targetid, level))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setadmin [playerid] [0-5]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pAdminLevel] = level;
+    SendFmt(playerid, COLOR_GREEN, "Admin level %s di-set ke %d.", PlayerInfo[targetid][pName], level);
+    return 1;
+}
+
+/* --- /giveweapon [playerid] [weaponid] [ammo] --- */
+CMD:giveweapon(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 5)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 5 (Owner)."), 1;
+    new targetid, weaponid, ammo;
+    if (sscanf(params, "udd", targetid, weaponid, ammo))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /giveweapon [playerid] [weaponid] [ammo]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    GivePlayerWeapon(targetid, weaponid, ammo);
+    SendFmt(playerid, COLOR_GREEN, "Weapon %d (%d ammo) diberikan ke %s.", weaponid, ammo, PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /givemoney [playerid] [amount] --- */
+CMD:givemoney(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 5)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 5 (Owner)."), 1;
+    new targetid, amount;
+    if (sscanf(params, "ud", targetid, amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /givemoney [playerid] [jumlah]"), 1;
+    if (!IsPlayerConnected(targetid))
+        return SendMsg(playerid, COLOR_RED, "Pemain tidak ditemukan."), 1;
+    PlayerInfo[targetid][pCash] += amount;
+    GivePlayerMoney(targetid, amount);
+    SendFmt(playerid, COLOR_GREEN, "$%d diberikan ke %s.", amount, PlayerInfo[targetid][pName]);
+    return 1;
+}
+
+/* --- /settax [rate] --- */
+CMD:settax(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 5)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 5 (Owner)."), 1;
+    new rate;
+    if (sscanf(params, "d", rate))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /settax [0-50]"), 1;
+    if (rate < 0 || rate > 50)
+        return SendMsg(playerid, COLOR_RED, "Rate 0-50 persen."), 1;
+    gTaxRate = rate;
+    SendFmt(playerid, COLOR_GREEN, "Pajak PPh di-set ke %d persen.", rate);
+    return 1;
+}
+
+/* --- /setpnssalary [amount] --- */
+CMD:setpnssalary(playerid, params[])
+{
+    if (!PlayerInfo[playerid][pIsLogged]) return 1;
+    if (PlayerInfo[playerid][pAdminLevel] < 5)
+        return SendMsg(playerid, COLOR_RED, "Butuh admin level 5 (Owner)."), 1;
+    new amount;
+    if (sscanf(params, "d", amount))
+        return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /setpnssalary [jumlah]"), 1;
+    gPNSSalary = amount;
+    SendFmt(playerid, COLOR_GREEN, "Gaji PNS di-set ke $%d.", amount);
     return 1;
 }
 
