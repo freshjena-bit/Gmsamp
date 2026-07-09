@@ -1191,19 +1191,20 @@ CMD:stats(playerid, params[])
     strcat(str, line, sizeof(str));
     format(line, sizeof(line), "Phone: %d | Credit: $%d\n", PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit]);
     strcat(str, line, sizeof(str));
-    format(line, sizeof(line), "KTP: %s | KK: %s | SIM: %s\n",
-        PlayerInfo[playerid][pKTP] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pKK] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pSIM] ? "Ada" : "Tidak");
+    new ktp_s[8], kk_s[8], sim_s[8], stnk_s[8], bpkb_s[8], paspor_s[8], sis_s[8], drv_s[8];
+    ktp_s = PlayerInfo[playerid][pKTP] ? "Ada" : "Tidak";
+    kk_s = PlayerInfo[playerid][pKK] ? "Ada" : "Tidak";
+    sim_s = PlayerInfo[playerid][pSIM] ? "Ada" : "Tidak";
+    stnk_s = PlayerInfo[playerid][pSTNK] ? "Ada" : "Tidak";
+    bpkb_s = PlayerInfo[playerid][pBPKB] ? "Ada" : "Tidak";
+    paspor_s = PlayerInfo[playerid][pPaspor] ? "Ada" : "Tidak";
+    sis_s = PlayerInfo[playerid][pSIS] ? "Ada" : "Tidak";
+    drv_s = PlayerInfo[playerid][pDriveLic] ? "Ada" : "Tidak";
+    format(line, sizeof(line), "KTP: %s | KK: %s | SIM: %s\n", ktp_s, kk_s, sim_s);
     strcat(str, line, sizeof(str));
-    format(line, sizeof(line), "STNK: %s | BPKB: %s | Paspor: %s\n",
-        PlayerInfo[playerid][pSTNK] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pBPKB] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pPaspor] ? "Ada" : "Tidak");
+    format(line, sizeof(line), "STNK: %s | BPKB: %s | Paspor: %s\n", stnk_s, bpkb_s, paspor_s);
     strcat(str, line, sizeof(str));
-    format(line, sizeof(line), "SIS: %s | DriveLic: %s\n\n",
-        PlayerInfo[playerid][pSIS] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pDriveLic] ? "Ada" : "Tidak");
+    format(line, sizeof(line), "SIS: %s | DriveLic: %s\n\n", sis_s, drv_s);
     strcat(str, line, sizeof(str));
     format(line, sizeof(line), "KPR: %d | KKB: %d | KTA: %d\n", PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB], PlayerInfo[playerid][pKTA]);
     strcat(str, line, sizeof(str));
@@ -1266,7 +1267,7 @@ public OnSleepRecover(playerid)
     PlayerInfo[playerid][pSleeping] = 0;
     TogglePlayerControllable(playerid, true);
     ClearAnimations(playerid);
-    SendMsg(playerid, COLOR_GREEN, "[TIDUR] Anda bangun segar! Sleep: 100%%");
+    SendMsg(playerid, COLOR_GREEN, "[TIDUR] Anda bangun segar! Sleep: 100 persen");
     return 1;
 }
 
@@ -1343,17 +1344,18 @@ CMD:dokumen(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[512];
-    format(str, sizeof(str),
-        "{FFFFFF}Dokumen Anda:\n\nKTP: %s\nKK: %s\nSIM: %s\nSTNK: %s\nBPKB: %s\nPaspor: %s\nSIS: %s\nDriveLic: %s\nWeaponLic: %s\n\n{FFFF00}Pergi ke Balai Kota untuk mengurus dokumen (/urusdokumen).",
-        PlayerInfo[playerid][pKTP] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pKK] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pSIM] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pSTNK] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pBPKB] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pPaspor] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pSIS] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pDriveLic] ? "{00FF00}Ada" : "{FF0000}Tidak",
-        PlayerInfo[playerid][pWeaponLic] ? "{00FF00}Ada" : "{FF0000}Tidak");
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}Dokumen Anda:\n\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pKTP] ? "{00FF00}KTP: Ada\n" : "{FF0000}KTP: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pKK] ? "{00FF00}KK: Ada\n" : "{FF0000}KK: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pSIM] ? "{00FF00}SIM: Ada\n" : "{FF0000}SIM: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pSTNK] ? "{00FF00}STNK: Ada\n" : "{FF0000}STNK: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pBPKB] ? "{00FF00}BPKB: Ada\n" : "{FF0000}BPKB: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pPaspor] ? "{00FF00}Paspor: Ada\n" : "{FF0000}Paspor: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pSIS] ? "{00FF00}SIS: Ada\n" : "{FF0000}SIS: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pDriveLic] ? "{00FF00}DriveLic: Ada\n" : "{FF0000}DriveLic: Tidak\n", sizeof(str));
+    strcat(str, PlayerInfo[playerid][pWeaponLic] ? "{00FF00}WeaponLic: Ada\n\n" : "{FF0000}WeaponLic: Tidak\n\n", sizeof(str));
+    strcat(str, "{FFFF00}Pergi ke Balai Kota untuk mengurus dokumen (/urusdokumen).", sizeof(str));
     ShowPlayerDialog(playerid, DIALOG_DOCS_MENU, DIALOG_STYLE_MSGBOX, "{00FF00}Dokumen", str, "Tutup", "");
     return 1;
 }
@@ -1817,9 +1819,15 @@ CMD:pemerintah(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[256];
-    format(str, sizeof(str),
-        "{FFFFFF}Status Pemerintahan:\n\nPajak PPh: %d%%\nGaji PNS: $%d\n\nPemilu aktif: %s\n\n{FFFF00}/daftarpilkada untuk mencalonkan diri\n/pilkada untuk memilih",
-        gTaxRate, gPNSSalary, gElectionActive ? "Ya" : "Tidak");
+    str[0] = EOS;
+    new gov_str[64];
+    format(gov_str, sizeof(gov_str), "{FFFFFF}Status Pemerintahan:\n\nPajak PPh: %d persen\n", gTaxRate);
+    strcat(str, gov_str, sizeof(str));
+    new elec_s[8];
+    elec_s = gElectionActive ? "Ya" : "Tidak";
+    format(gov_str, sizeof(gov_str), "Gaji PNS: $%d\n\nPemilu aktif: %s\n\n", gPNSSalary, elec_s);
+    strcat(str, gov_str, sizeof(str));
+    strcat(str, "{FFFF00}/daftarpilkada untuk mencalonkan diri\n/pilkada untuk memilih", sizeof(str));
     ShowPlayerDialog(playerid, DIALOG_GOVT_MENU, DIALOG_STYLE_MSGBOX, "{00FF00}Pemerintahan", str, "Tutup", "");
     return 1;
 }
@@ -1857,8 +1865,11 @@ CMD:daftarpilkada(playerid, params[])
     strcat(GovCandidate[slot][gPlayerName], PlayerInfo[playerid][pName], MAX_PLAYER_NAME);
     GovCandidate[slot][gVoteCount] = 0;
 
-    new _sf25[512]; format(_sf25, sizeof(_sf25),  "[PEMILU] %s mendaftar sebagai calon %s!", 
-        PlayerInfo[playerid][pName],  type == 1 ? "Gubernur" : "Walikota"); SendClientMessageToAll(COLOR_GREEN, _sf25);
+    new _sf25[512];
+    new gov_type_s[16];
+    gov_type_s = type == 1 ? "Gubernur" : "Walikota";
+    format(_sf25, sizeof(_sf25), "[PEMILU] %s mendaftar sebagai calon %s!", PlayerInfo[playerid][pName], gov_type_s);
+    SendClientMessageToAll(COLOR_GREEN, _sf25);
     return 1;
 }
 
@@ -1880,10 +1891,9 @@ CMD:pilkada(playerid, params[])
         if (GovCandidate[i][gExists])
         {
             new line[128];
-            format(line, sizeof(line), "%s - %s (%d suara)\n",
-                GovCandidate[i][gPlayerName],
-                GovCandidate[i][gType] == 1 ? "Gubernur" : "Walikota",
-                GovCandidate[i][gVoteCount]);
+            new cand_type[16];
+            cand_type = GovCandidate[i][gType] == 1 ? "Gubernur" : "Walikota";
+            format(line, sizeof(line), "%s - %s (%d suara)\n", GovCandidate[i][gPlayerName], cand_type, GovCandidate[i][gVoteCount]);
             strcat(str, line);
             count++;
         }
@@ -1902,9 +1912,12 @@ CMD:pajak(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[256];
-    format(str, sizeof(str),
-        "{FFFFFF}Info Pajak:\n\nPPh (Pajak Penghasilan): %d%% dari gaji\nPPN (Pajak Pertambahan Nilai): 11%% dari belanja\nPajak Properti: $5,000/rumah, $15,000/bisnis per bulan",
-        gTaxRate);
+    str[0] = EOS;
+    new pajak_str[128];
+    format(pajak_str, sizeof(pajak_str), "{FFFFFF}Info Pajak:\n\nPPh: %d persen dari gaji\n", gTaxRate);
+    strcat(str, pajak_str, sizeof(str));
+    strcat(str, "PPN: 11 persen dari belanja\n", sizeof(str));
+    strcat(str, "Pajak Properti: $5,000/rumah, $15,000/bisnis per bulan", sizeof(str));
     ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Pajak", str, "Tutup", "");
     return 1;
 }
@@ -2033,9 +2046,11 @@ public OnElectionEnd()
         SendClientMessageToAll(COLOR_RED, "[PEMILU] Tidak ada pemenang.");
         return 1;
     }
-    new _sf27[512]; format(_sf27, sizeof(_sf27),  "[PEMILU] %s terpilih sebagai %s!", 
-        GovCandidate[winner][gPlayerName], 
-        GovCandidate[winner][gType] == 1 ? "Gubernur" : "Walikota"); SendClientMessageToAll(COLOR_GREEN, _sf27);
+    new _sf27[512];
+    new win_type_s[16];
+    win_type_s = GovCandidate[winner][gType] == 1 ? "Gubernur" : "Walikota";
+    format(_sf27, sizeof(_sf27), "[PEMILU] %s terpilih sebagai %s!", GovCandidate[winner][gPlayerName], win_type_s);
+    SendClientMessageToAll(COLOR_GREEN, _sf27);
     return 1;
 }
 
