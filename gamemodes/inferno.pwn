@@ -30,14 +30,14 @@
 #include <a_mysql>
 #include <zcmd>
 
-/* SendFmt macro - format + SendClientMessage in one call.
-   Usage: SendFmt(playerid, color, "fmt %s %d", str, int); */
-#define SendFmt(%0,%1,%2) \\
-    do { \\
-        new _sfmt_str[256]; \\
-        format(_sfmt_str, sizeof(_sfmt_str), %2); \\
-        SendClientMessage(%0, %1, _sfmt_str); \\
-    } while(0)
+/* SendFmt - format + SendClientMessage. Uses global buffer. */
+stock SendFmt(playerid, color, const fmat[], {Float, _}:...)
+{
+    new str[256];
+    format(str, sizeof(str), fmat);
+    SendClientMessage(playerid, color, str);
+    return 1;
+}
 // #include <foreach>  // Replaced with for loops
 
 /* =====================================================================
