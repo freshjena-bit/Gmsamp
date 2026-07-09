@@ -251,7 +251,7 @@ enum E_PVEH_DATA
     Float:pvX, Float:pvY, Float:pvZ, Float:pvA,
     pvColor1, pvColor2,
     pvOwner[MAX_PLAYER_NAME],
-    pvFuel,             // bensin saat ini (liter)
+    Float:pvFuel,             // bensin saat ini (liter)
     pvFuelType,         // 0=Pertalite, 1=Pertamax, 2=Solar, 3=Dexlite
     pvLocked,
     pvVehicleID,
