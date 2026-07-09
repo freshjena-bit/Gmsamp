@@ -39,7 +39,7 @@
 #define MAX_PLAYERS_DB       5000
 #define MAX_HOUSES           150
 #define MAX_BUSINESSES       50
-#define MAX_VEHICLES         800
+#define MAX_PVEHICLES         800
 #define MAX_FUEL_STATIONS    20
 #define MAX_HOSPITALS        5
 #define MAX_DOCS_OFFICES     3
@@ -256,7 +256,7 @@ enum E_PVEH_DATA
     pvLocked,
     pvVehicleID,
 }
-new PVehInfo[MAX_VEHICLES][E_PVEH_DATA];
+new PVehInfo[MAX_PVEHICLES][E_PVEH_DATA];
 
 /* ---------- Data interior/exterior ---------- */
 enum E_INTERIOR_DATA
@@ -358,10 +358,14 @@ stock SendMsg(playerid, color, const text[])
     return 1;
 }
 
+/*
+ * SendFmt / SendAllFmt — format pesan lalu kirim.
+ * Pawn's format() mendukung variadic args, jadi ini sederhana.
+ */
 stock SendFmt(playerid, color, const fmat[], {Float, _}:...)
 {
     new str[512];
-    va_format(str, sizeof(str), fmat, 2);
+    format(str, sizeof(str), fmat);
     SendClientMessage(playerid, color, str);
     return 1;
 }
@@ -369,15 +373,22 @@ stock SendFmt(playerid, color, const fmat[], {Float, _}:...)
 stock SendAllFmt(color, const fmat[], {Float, _}:...)
 {
     new str[512];
-    va_format(str, sizeof(str), fmat, 1);
+    format(str, sizeof(str), fmat);
     SendClientMessageToAll(color, str);
     return 1;
 }
 
-/* ---------- Hash password (sederhana, pakai SHA256 dari a_mysql) ---------- */
-stock HashPassword(const password[], salt[], output[], len = sizeof output)
+stock SendAllMsg(color, const msg[])
+{
+    SendClientMessageToAll(color, msg);
+    return 1;
+}
+
+/* ---------- Hash password (SHA256) ---------- */
+stock HashPassword(password[], salt[], output[], len = sizeof output)
 {
     SHA256_PassHash(password, salt, output, len);
+    return 1;
 }
 
 /* ---------- Generate salt ---------- */
@@ -536,7 +547,7 @@ public OnGameModeInit()
     AddPlayerClass(0, 1743.20, -1862.05, 13.58, 270.0, 0, 0, 0, 0, 0, 0);
 
     /* --- Koneksi MySQL --- */
-    gSQL = mysql_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB, MYSQL_PORT);
+    gSQL = mysql_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB);
     if (gSQL == MYSQL_INVALID_HANDLE || mysql_errno(gSQL) != 0)
     {
         print("[InfernoRP][FATAL] Tidak bisa konek MySQL!");
@@ -833,37 +844,61 @@ stock SavePlayerData(playerid)
     GetPlayerHealth(playerid, PlayerInfo[playerid][pHealth]);
     GetPlayerArmour(playerid, PlayerInfo[playerid][pArmor]);
 
-    new query[1024];
+    new query[512];
+
+    /* Update bagian 1: ekonomi & level */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET \
-            `cash`=%d, `bank`=%d, `debt`=%d, `credit_limit`=%d, `credit_used`=%d, \
-            `level`=%d, `exp`=%d, `skin`=%d, `age`=%d, `gender`=%d, \
-            `health`=%.1f, `armor`=%.1f, `hunger`=%.1f, `thirst`=%.1f, `sleep`=%.1f, `stamina`=%.1f, \
-            `sickness`=%d, `sick_time`=%d, \
-            `pos_x`=%.1f, `pos_y`=%.1f, `pos_z`=%.1f, `pos_a`=%.1f, `interior`=%d, `virtualworld`=%d, \
-            `wanted`=%d, `job`=%d, `faction`=%d, `faction_rank`=%d, \
-            `phone`=%d, `phone_credit`=%d, `phone_data`=%d, \
-            `ktp`=%d, `kk`=%d, `sim`=%d, `stnk`=%d, `bpkb`=%d, `paspor`=%d, `sis`=%d, \
-            `drive_lic`=%d, `weapon_lic`=%d, `bank_rek`=%d, `kpr`=%d, `kkb`=%d, `kta`=%d \
-         WHERE `id`=%d",
+        "UPDATE `players` SET `cash`=%d, `bank`=%d, `debt`=%d, `credit_limit`=%d, \
+        `credit_used`=%d, `level`=%d, `exp`=%d, `skin`=%d, `age`=%d, `gender`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank], PlayerInfo[playerid][pDebt],
         PlayerInfo[playerid][pCreditLimit], PlayerInfo[playerid][pCreditUsed],
         PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp],
         PlayerInfo[playerid][pSkin], PlayerInfo[playerid][pAge], PlayerInfo[playerid][pGender],
+        PlayerInfo[playerid][pID]);
+    mysql_tquery(gSQL, query);
+
+    /* Update bagian 2: survival */
+    mysql_format(gSQL, query, sizeof(query),
+        "UPDATE `players` SET `health`=%.1f, `armor`=%.1f, `hunger`=%.1f, \
+        `thirst`=%.1f, `sleep`=%.1f, `stamina`=%.1f, `sickness`=%d, `sick_time`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor],
         PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst],
         PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina],
         PlayerInfo[playerid][pSickness], PlayerInfo[playerid][pSickTime],
+        PlayerInfo[playerid][pID]);
+    mysql_tquery(gSQL, query);
+
+    /* Update bagian 3: posisi & status */
+    mysql_format(gSQL, query, sizeof(query),
+        "UPDATE `players` SET `pos_x`=%.1f, `pos_y`=%.1f, `pos_z`=%.1f, `pos_a`=%.1f, \
+        `interior`=%d, `virtualworld`=%d, `wanted`=%d, `job`=%d, `faction`=%d, \
+        `faction_rank`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pPosX], PlayerInfo[playerid][pPosY], PlayerInfo[playerid][pPosZ],
         PlayerInfo[playerid][pPosA], PlayerInfo[playerid][pInterior], PlayerInfo[playerid][pWorld],
         PlayerInfo[playerid][pWanted], PlayerInfo[playerid][pJob],
         PlayerInfo[playerid][pFaction], PlayerInfo[playerid][pFactionRank],
-        PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit], PlayerInfo[playerid][pPhoneData],
-        PlayerInfo[playerid][pKTP], PlayerInfo[playerid][pKK], PlayerInfo[playerid][pSIM],
-        PlayerInfo[playerid][pSTNK], PlayerInfo[playerid][pBPKB], PlayerInfo[playerid][pPaspor],
-        PlayerInfo[playerid][pSIS], PlayerInfo[playerid][pDriveLic], PlayerInfo[playerid][pWeaponLic],
+        PlayerInfo[playerid][pID]);
+    mysql_tquery(gSQL, query);
+
+    /* Update bagian 4: phone & dokumen */
+    mysql_format(gSQL, query, sizeof(query),
+        "UPDATE `players` SET `phone`=%d, `phone_credit`=%d, `phone_data`=%d, \
+        `ktp`=%d, `kk`=%d, `sim`=%d, `stnk`=%d, `bpkb`=%d, `paspor`=%d, `sis`=%d WHERE `id`=%d",
+        PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit],
+        PlayerInfo[playerid][pPhoneData], PlayerInfo[playerid][pKTP], PlayerInfo[playerid][pKK],
+        PlayerInfo[playerid][pSIM], PlayerInfo[playerid][pSTNK], PlayerInfo[playerid][pBPKB],
+        PlayerInfo[playerid][pPaspor], PlayerInfo[playerid][pSIS], PlayerInfo[playerid][pID]);
+    mysql_tquery(gSQL, query);
+
+    /* Update bagian 5: lisensi & kredit */
+    mysql_format(gSQL, query, sizeof(query),
+        "UPDATE `players` SET `drive_lic`=%d, `weapon_lic`=%d, `bank_rek`=%d, \
+        `kpr`=%d, `kkb`=%d, `kta`=%d, `jail`=%d, `jail_time`=%d, `arrest`=%d, \
+        `arrest_time`=%d WHERE `id`=%d",
+        PlayerInfo[playerid][pDriveLic], PlayerInfo[playerid][pWeaponLic],
         PlayerInfo[playerid][pBankRek], PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB],
-        PlayerInfo[playerid][pKTA],
+        PlayerInfo[playerid][pKTA], PlayerInfo[playerid][pJail], PlayerInfo[playerid][pJailTime],
+        PlayerInfo[playerid][pArrest], PlayerInfo[playerid][pArrestTime],
         PlayerInfo[playerid][pID]);
     mysql_tquery(gSQL, query);
 }
@@ -2053,11 +2088,6 @@ public OnElectionEnd()
         GovCandidate[winner][gPlayerName],
         GovCandidate[winner][gType] == 1 ? "Gubernur" : "Walikota");
     return 1;
-}
-
-stock SendAllMsg(color, const msg[])
-{
-    SendClientMessageToAll(color, msg);
 }
 
 /* =====================================================================
