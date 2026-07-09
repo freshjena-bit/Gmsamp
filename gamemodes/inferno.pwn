@@ -1027,9 +1027,57 @@ public OnPlayerDataLoaded(playerid)
     cache_get_row_count(rows);
     if (rows > 0)
     {
-        /* Pemain terdaftar - tampilkan dialog login */
+        /* Pemain terdaftar - load SEMUA data sekarang (cache masih valid!) */
         cache_get_value_name(0, "password", PlayerInfo[playerid][pPassword], 129);
         cache_get_value_name(0, "salt", PlayerInfo[playerid][pSalt], 32);
+        cache_get_value_name_int(0, "id", PlayerInfo[playerid][pID]);
+        cache_get_value_name_int(0, "cash", PlayerInfo[playerid][pCash]);
+        cache_get_value_name_int(0, "bank", PlayerInfo[playerid][pBank]);
+        cache_get_value_name_int(0, "debt", PlayerInfo[playerid][pDebt]);
+        cache_get_value_name_int(0, "credit_limit", PlayerInfo[playerid][pCreditLimit]);
+        cache_get_value_name_int(0, "credit_used", PlayerInfo[playerid][pCreditUsed]);
+        cache_get_value_name_int(0, "level", PlayerInfo[playerid][pLevel]);
+        cache_get_value_name_int(0, "exp", PlayerInfo[playerid][pExp]);
+        cache_get_value_name_int(0, "admin_level", PlayerInfo[playerid][pAdminLevel]);
+        cache_get_value_name_int(0, "skin", PlayerInfo[playerid][pSkin]);
+        cache_get_value_name_int(0, "age", PlayerInfo[playerid][pAge]);
+        cache_get_value_name_int(0, "gender", PlayerInfo[playerid][pGender]);
+        cache_get_value_name_float(0, "health", PlayerInfo[playerid][pHealth]);
+        cache_get_value_name_float(0, "armor", PlayerInfo[playerid][pArmor]);
+        cache_get_value_name_float(0, "hunger", PlayerInfo[playerid][pHunger]);
+        cache_get_value_name_float(0, "thirst", PlayerInfo[playerid][pThirst]);
+        cache_get_value_name_float(0, "sleep", PlayerInfo[playerid][pSleep]);
+        cache_get_value_name_float(0, "stamina", PlayerInfo[playerid][pStamina]);
+        cache_get_value_name_int(0, "sickness", PlayerInfo[playerid][pSickness]);
+        cache_get_value_name_int(0, "sick_time", PlayerInfo[playerid][pSickTime]);
+        cache_get_value_name_float(0, "pos_x", PlayerInfo[playerid][pPosX]);
+        cache_get_value_name_float(0, "pos_y", PlayerInfo[playerid][pPosY]);
+        cache_get_value_name_float(0, "pos_z", PlayerInfo[playerid][pPosZ]);
+        cache_get_value_name_float(0, "pos_a", PlayerInfo[playerid][pPosA]);
+        cache_get_value_name_int(0, "interior", PlayerInfo[playerid][pInterior]);
+        cache_get_value_name_int(0, "virtualworld", PlayerInfo[playerid][pWorld]);
+        cache_get_value_name_int(0, "wanted", PlayerInfo[playerid][pWanted]);
+        cache_get_value_name_int(0, "job", PlayerInfo[playerid][pJob]);
+        cache_get_value_name_int(0, "faction", PlayerInfo[playerid][pFaction]);
+        cache_get_value_name_int(0, "faction_rank", PlayerInfo[playerid][pFactionRank]);
+        cache_get_value_name_int(0, "phone", PlayerInfo[playerid][pPhone]);
+        cache_get_value_name_int(0, "phone_credit", PlayerInfo[playerid][pPhoneCredit]);
+        cache_get_value_name_int(0, "phone_data", PlayerInfo[playerid][pPhoneData]);
+        cache_get_value_name_int(0, "ktp", PlayerInfo[playerid][pKTP]);
+        cache_get_value_name_int(0, "kk", PlayerInfo[playerid][pKK]);
+        cache_get_value_name_int(0, "sim", PlayerInfo[playerid][pSIM]);
+        cache_get_value_name_int(0, "stnk", PlayerInfo[playerid][pSTNK]);
+        cache_get_value_name_int(0, "bpkb", PlayerInfo[playerid][pBPKB]);
+        cache_get_value_name_int(0, "paspor", PlayerInfo[playerid][pPaspor]);
+        cache_get_value_name_int(0, "sis", PlayerInfo[playerid][pSIS]);
+        cache_get_value_name_int(0, "drive_lic", PlayerInfo[playerid][pDriveLic]);
+        cache_get_value_name_int(0, "weapon_lic", PlayerInfo[playerid][pWeaponLic]);
+        cache_get_value_name_int(0, "bank_rek", PlayerInfo[playerid][pBankRek]);
+        cache_get_value_name_int(0, "kpr", PlayerInfo[playerid][pKPR]);
+        cache_get_value_name_int(0, "kkb", PlayerInfo[playerid][pKKB]);
+        cache_get_value_name_int(0, "kta", PlayerInfo[playerid][pKTA]);
+
+        /* Tampilkan dialog login */
         ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD,
             "{00FF00}Login",
             "{FFFFFF}Selamat datang kembali!\nAkun Anda terdaftar.\nMasukkan password:",
@@ -1103,8 +1151,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 return 1;
             }
 
-            /* Login berhasil - muat data */
-            LoadPlayerData(playerid);
+            /* Login berhasil - data sudah di-load di OnPlayerDataLoaded */
+            PlayerInfo[playerid][pIsLogged] = true;
             SpawnPlayer(playerid);
             SendMsg(playerid, COLOR_GREEN, "Login berhasil! Selamat datang di Inferno RP.");
             return 1;
