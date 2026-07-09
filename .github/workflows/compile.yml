@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Required so the GITHUB_TOKEN can create releases (otherwise 403).
 permissions:
   contents: write
 
@@ -17,54 +16,33 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Install Wine (for Windows pawncc.exe)
+    - name: Install Wine
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update -qq
-        sudo apt-get install -y -qq wine32 wine64 libwine libwine:i386 2>&1 | tail -5
-        wine --version 2>&1 || true
+        sudo apt-get install -y -qq wine32 wine64 2>&1 | tail -3
 
-    - name: Compile gamemode (via Wine + Windows pawncc.exe)
+    - name: Compile inferno.pwn
       env:
         WINEDEBUG: -all
       run: |
         cd gamemodes
-
-        # The LRP REMAKE gamemode was originally compiled with the Windows
-        # pawncc.exe shipped in pawno/. The Linux pawn-lang/compiler 3.10.10
-        # segfaults on this 87K-line codebase (exit 139), so we use Wine
-        # to run the exact Windows compiler that produced the original GM.amx.
-
-        # pawncc.exe is in ../pawno/ and needs pawnc.dll (same directory).
-        # Include paths use Windows-style separators but Wine handles both.
         set +e
         wine ../pawno/pawncc.exe \
-          GM.pwn \
+          inferno.pwn \
           -i"../pawno/include" \
           -i"../include" \
-          -i"." \
-          -i"VOICESYSTEM" \
-          -i"FEATURE/MODSHOP" \
-          -i"CMD" \
-          -i"CMD/ALIAS" \
-          -i"DATA" \
-          -i"DYNAMIC" \
-          -i"JOB" \
-          -i"MAPMEANFULLY" \
-          -i"MAPMEANFULLY/FACTION" \
-          -i"FEATURE" \
-          -i"FEATURE/VehicleArea" \
-          -oGM.amx \
+          -oinferno.amx \
           -d3 \
           2>&1 | tee ../compile.log
         rc=${PIPESTATUS[0]}
         echo "pawncc exit code: $rc"
         echo "---"
-        if [ -f GM.amx ] && [ -s GM.amx ]; then
-          echo "✅ COMPILE SUCCESS — GM.amx created ($(stat -c%s GM.amx) bytes)"
+        if [ -f inferno.amx ] && [ -s inferno.amx ]; then
+          echo "COMPILE SUCCESS - inferno.amx created ($(stat -c%s inferno.amx) bytes)"
         else
-          echo "❌ COMPILE FAILED — no .amx produced. Full log above ↑↑↑"
-          tail -n 150 ../compile.log || true
+          echo "COMPILE FAILED - no .amx produced"
+          cat ../compile.log
           exit 1
         fi
 
@@ -78,22 +56,23 @@ jobs:
         retention-days: 30
 
     - name: Upload .amx artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: GM-amx
-        path: gamemodes/GM.amx
+        name: inferno-amx
+        path: gamemodes/inferno.amx
         if-no-files-found: error
         retention-days: 90
 
     - name: Create Release
+      if: success()
       uses: softprops/action-gh-release@v2
       with:
         tag_name: compiled-${{ github.sha }}
         name: Build ${{ github.sha }}
-        files: gamemodes/GM.amx
+        files: gamemodes/inferno.amx
         body: |
           Compiled from commit ${{ github.sha }}
-
           Build: ${{ github.run_id }}
         draft: false
         prerelease: false
