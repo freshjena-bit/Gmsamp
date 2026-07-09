@@ -1172,26 +1172,43 @@ public OnPayday()
 CMD:stats(playerid, params[])
 {
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
-    new str[512];
-    format(str, sizeof(str),
-        "{FFFFFF}=== Stats %s ===\n\nLevel: %d | Exp: %d\nCash: $%d | Bank: $%d\nHealth: %.0f | Armor: %.0f\nHunger: %.0f%% | Thirst: %.0f%%\nSleep: %.0f%% | Stamina: %.0f%%\nJob: %d | Faction: %d\nPhone: %d | Credit: $%d\nKTP: %s | KK: %s | SIM: %s\nSTNK: %s | BPKB: %s | Paspor: %s\nSIS: %s | DriveLic: %s\n\nKPR: %d | KKB: %d | KTA: %d\nKartu Kredit: $%d / $%d",
-        PlayerInfo[playerid][pName], PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp],
-        PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank],
-        PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor],
-        PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst],
-        PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina],
-        PlayerInfo[playerid][pJob], PlayerInfo[playerid][pFaction],
-        PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit],
+    new str[1024];
+    str[0] = EOS;
+    new line[128];
+    format(line, sizeof(line), "{FFFFFF}=== Stats %s ===\n\n", PlayerInfo[playerid][pName]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Level: %d | Exp: %d\n", PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Cash: $%d | Bank: $%d\n", PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Health: %.0f | Armor: %.0f\n", PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Hunger: %.0f | Thirst: %.0f\n", PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Sleep: %.0f | Stamina: %.0f\n", PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Job: %d | Faction: %d\n", PlayerInfo[playerid][pJob], PlayerInfo[playerid][pFaction]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Phone: %d | Credit: $%d\n", PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "KTP: %s | KK: %s | SIM: %s\n",
         PlayerInfo[playerid][pKTP] ? "Ada" : "Tidak",
         PlayerInfo[playerid][pKK] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pSIM] ? "Ada" : "Tidak",
+        PlayerInfo[playerid][pSIM] ? "Ada" : "Tidak");
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "STNK: %s | BPKB: %s | Paspor: %s\n",
         PlayerInfo[playerid][pSTNK] ? "Ada" : "Tidak",
         PlayerInfo[playerid][pBPKB] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pPaspor] ? "Ada" : "Tidak",
+        PlayerInfo[playerid][pPaspor] ? "Ada" : "Tidak");
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "SIS: %s | DriveLic: %s\n\n",
         PlayerInfo[playerid][pSIS] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pDriveLic] ? "Ada" : "Tidak",
-        PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB], PlayerInfo[playerid][pKTA],
-        PlayerInfo[playerid][pCreditUsed], PlayerInfo[playerid][pCreditLimit]);
+        PlayerInfo[playerid][pDriveLic] ? "Ada" : "Tidak");
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "KPR: %d | KKB: %d | KTA: %d\n", PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB], PlayerInfo[playerid][pKTA]);
+    strcat(str, line, sizeof(str));
+    format(line, sizeof(line), "Kartu Kredit: $%d / $%d", PlayerInfo[playerid][pCreditUsed], PlayerInfo[playerid][pCreditLimit]);
+    strcat(str, line, sizeof(str));
     ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "{00FF00}Stats", str, "Tutup", "");
     return 1;
 }
@@ -1200,8 +1217,20 @@ CMD:stats(playerid, params[])
 CMD:help(playerid, params[])
 {
     new str[1024];
-    format(str, sizeof(str),
-        "{FFFFFF}=== Inferno RP - Commands ===\n\n{00FF00}Umum:{FFFFFF}\n/stats /help\n\n{00FF00}Survival:{FFFFFF}\n/tidur /bangun /makan /minum /obat\n\n{00FF00}Dokumen:{FFFFFF}\n/dokumen /urusdokumen\n\n{00FF00}Handphone:{FFFFFF}\n/hp /sms /call /hangup /topup\n\n{00FF00}Bank:{FFFFFF}\n/bank /atm /kredit /bayarkredit\n\n{00FF00}BBM:{FFFFFF}\n/isibensin /cekbensin\n\n{00FF00}Pekerjaan:{FFFFFF}\n/kerja /quitjob\n\n{00FF00}Medis:{FFFFFF}\n/rawatinap /ambulans /resep\n\n{00FF00}Polisi:{FFFFFF}\n/sidang /putusan /jaksa /pengacara\n\n{00FF00}Pemerintahan:{FFFFFF}\n/pemerintah /daftarpilkada /pilkada\n\n{00FF00}Pajak:{FFFFFF}\n/pajak\n\n{00FF00}Interior:{FFFFFF}\nTekan Y di marker pintu");
+    str[0] = EOS;
+    strcat(str, "{FFFFFF}=== Inferno RP - Commands ===\n\n", sizeof(str));
+    strcat(str, "{00FF00}Umum:{FFFFFF} /stats /help\n\n", sizeof(str));
+    strcat(str, "{00FF00}Survival:{FFFFFF} /tidur /bangun /makan /minum /obat\n\n", sizeof(str));
+    strcat(str, "{00FF00}Dokumen:{FFFFFF} /dokumen /urusdokumen\n\n", sizeof(str));
+    strcat(str, "{00FF00}Handphone:{FFFFFF} /hp /sms /call /hangup /topup\n\n", sizeof(str));
+    strcat(str, "{00FF00}Bank:{FFFFFF} /bank /atm /kredit /bayarkredit\n\n", sizeof(str));
+    strcat(str, "{00FF00}BBM:{FFFFFF} /isibensin /cekbensin\n\n", sizeof(str));
+    strcat(str, "{00FF00}Pekerjaan:{FFFFFF} /kerja /quitjob\n\n", sizeof(str));
+    strcat(str, "{00FF00}Medis:{FFFFFF} /rawatinap /ambulans /resep\n\n", sizeof(str));
+    strcat(str, "{00FF00}Polisi:{FFFFFF} /sidang /putusan /jaksa /pengacara\n\n", sizeof(str));
+    strcat(str, "{00FF00}Pemerintahan:{FFFFFF} /pemerintah /daftarpilkada /pilkada\n\n", sizeof(str));
+    strcat(str, "{00FF00}Pajak:{FFFFFF} /pajak\n\n", sizeof(str));
+    strcat(str, "{00FF00}Interior:{FFFFFF} Tekan Y di marker pintu", sizeof(str));
     ShowPlayerDialog(playerid, DIALOG_HELP, DIALOG_STYLE_MSGBOX, "{00FF00}Help", str, "Tutup", "");
     return 1;
 }
