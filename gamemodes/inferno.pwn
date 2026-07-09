@@ -717,8 +717,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 
             new query[512];
             mysql_format(gSQL, query, sizeof(query),
-                "INSERT INTO `players` (`name`, `password`, `salt`, `ip`, `cash`, `bank`, `level`, `skin`, `age`, `gender`) \
-                 VALUES ('%e', '%e', '%e', '%e', %d, %d, 1, 0, 17, 0)",
+                "INSERT INTO `players` (`name`, `password`, `salt`, `ip`, `cash`, `bank`, `level`, `skin`, `age`, `gender`) VALUES ('%e', '%e', '%e', '%e', %d, %d, 1, 0, 17, 0)",
                 name, hash, salt, ip, STARTING_CASH, STARTING_BANK);
             mysql_tquery(gSQL, query, "OnPlayerRegisterComplete", "i", playerid);
             return 1;
@@ -823,8 +822,7 @@ stock SavePlayerData(playerid)
 
     /* Update bagian 1: ekonomi & level */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET `cash`=%d, `bank`=%d, `debt`=%d, `credit_limit`=%d, \
-        `credit_used`=%d, `level`=%d, `exp`=%d, `skin`=%d, `age`=%d, `gender`=%d WHERE `id`=%d",
+        "UPDATE `players` SET `cash`=%d, `bank`=%d, `debt`=%d, `credit_limit`=%d, `credit_used`=%d, `level`=%d, `exp`=%d, `skin`=%d, `age`=%d, `gender`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank], PlayerInfo[playerid][pDebt],
         PlayerInfo[playerid][pCreditLimit], PlayerInfo[playerid][pCreditUsed],
         PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp],
@@ -834,8 +832,7 @@ stock SavePlayerData(playerid)
 
     /* Update bagian 2: survival */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET `health`=%.1f, `armor`=%.1f, `hunger`=%.1f, \
-        `thirst`=%.1f, `sleep`=%.1f, `stamina`=%.1f, `sickness`=%d, `sick_time`=%d WHERE `id`=%d",
+        "UPDATE `players` SET `health`=%.1f, `armor`=%.1f, `hunger`=%.1f, `thirst`=%.1f, `sleep`=%.1f, `stamina`=%.1f, `sickness`=%d, `sick_time`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor],
         PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst],
         PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina],
@@ -845,9 +842,7 @@ stock SavePlayerData(playerid)
 
     /* Update bagian 3: posisi & status */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET `pos_x`=%.1f, `pos_y`=%.1f, `pos_z`=%.1f, `pos_a`=%.1f, \
-        `interior`=%d, `virtualworld`=%d, `wanted`=%d, `job`=%d, `faction`=%d, \
-        `faction_rank`=%d WHERE `id`=%d",
+        "UPDATE `players` SET `pos_x`=%.1f, `pos_y`=%.1f, `pos_z`=%.1f, `pos_a`=%.1f, `interior`=%d, `virtualworld`=%d, `wanted`=%d, `job`=%d, `faction`=%d, `faction_rank`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pPosX], PlayerInfo[playerid][pPosY], PlayerInfo[playerid][pPosZ],
         PlayerInfo[playerid][pPosA], PlayerInfo[playerid][pInterior], PlayerInfo[playerid][pWorld],
         PlayerInfo[playerid][pWanted], PlayerInfo[playerid][pJob],
@@ -857,8 +852,7 @@ stock SavePlayerData(playerid)
 
     /* Update bagian 4: phone & dokumen */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET `phone`=%d, `phone_credit`=%d, `phone_data`=%d, \
-        `ktp`=%d, `kk`=%d, `sim`=%d, `stnk`=%d, `bpkb`=%d, `paspor`=%d, `sis`=%d WHERE `id`=%d",
+        "UPDATE `players` SET `phone`=%d, `phone_credit`=%d, `phone_data`=%d, `ktp`=%d, `kk`=%d, `sim`=%d, `stnk`=%d, `bpkb`=%d, `paspor`=%d, `sis`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit],
         PlayerInfo[playerid][pPhoneData], PlayerInfo[playerid][pKTP], PlayerInfo[playerid][pKK],
         PlayerInfo[playerid][pSIM], PlayerInfo[playerid][pSTNK], PlayerInfo[playerid][pBPKB],
@@ -867,9 +861,7 @@ stock SavePlayerData(playerid)
 
     /* Update bagian 5: lisensi & kredit */
     mysql_format(gSQL, query, sizeof(query),
-        "UPDATE `players` SET `drive_lic`=%d, `weapon_lic`=%d, `bank_rek`=%d, \
-        `kpr`=%d, `kkb`=%d, `kta`=%d, `jail`=%d, `jail_time`=%d, `arrest`=%d, \
-        `arrest_time`=%d WHERE `id`=%d",
+        "UPDATE `players` SET `drive_lic`=%d, `weapon_lic`=%d, `bank_rek`=%d, `kpr`=%d, `kkb`=%d, `kta`=%d, `jail`=%d, `jail_time`=%d, `arrest`=%d, `arrest_time`=%d WHERE `id`=%d",
         PlayerInfo[playerid][pDriveLic], PlayerInfo[playerid][pWeaponLic],
         PlayerInfo[playerid][pBankRek], PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB],
         PlayerInfo[playerid][pKTA], PlayerInfo[playerid][pJail], PlayerInfo[playerid][pJailTime],
@@ -1182,19 +1174,7 @@ CMD:stats(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[512];
     format(str, sizeof(str),
-        "{FFFFFF}=== Stats %s ===\n\n\
-        Level: %d | Exp: %d\n\
-        Cash: $%d | Bank: $%d\n\
-        Health: %.0f | Armor: %.0f\n\
-        Hunger: %.0f%% | Thirst: %.0f%%\n\
-        Sleep: %.0f%% | Stamina: %.0f%%\n\
-        Job: %d | Faction: %d\n\
-        Phone: %d | Credit: $%d\n\
-        KTP: %s | KK: %s | SIM: %s\n\
-        STNK: %s | BPKB: %s | Paspor: %s\n\
-        SIS: %s | DriveLic: %s\n\n\
-        KPR: %d | KKB: %d | KTA: %d\n\
-        Kartu Kredit: $%d / $%d",
+        "{FFFFFF}=== Stats %s ===\n\nLevel: %d | Exp: %d\nCash: $%d | Bank: $%d\nHealth: %.0f | Armor: %.0f\nHunger: %.0f%% | Thirst: %.0f%%\nSleep: %.0f%% | Stamina: %.0f%%\nJob: %d | Faction: %d\nPhone: %d | Credit: $%d\nKTP: %s | KK: %s | SIM: %s\nSTNK: %s | BPKB: %s | Paspor: %s\nSIS: %s | DriveLic: %s\n\nKPR: %d | KKB: %d | KTA: %d\nKartu Kredit: $%d / $%d",
         PlayerInfo[playerid][pName], PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp],
         PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank],
         PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor],
@@ -1221,19 +1201,7 @@ CMD:help(playerid, params[])
 {
     new str[1024];
     format(str, sizeof(str),
-        "{FFFFFF}=== Inferno RP - Commands ===\n\n\
-        {00FF00}Umum:{FFFFFF}\n/stats /help\n\n\
-        {00FF00}Survival:{FFFFFF}\n/tidur /bangun /makan /minum /obat\n\n\
-        {00FF00}Dokumen:{FFFFFF}\n/dokumen /urusdokumen\n\n\
-        {00FF00}Handphone:{FFFFFF}\n/hp /sms /call /hangup /topup\n\n\
-        {00FF00}Bank:{FFFFFF}\n/bank /atm /kredit /bayarkredit\n\n\
-        {00FF00}BBM:{FFFFFF}\n/isibensin /cekbensin\n\n\
-        {00FF00}Pekerjaan:{FFFFFF}\n/kerja /quitjob\n\n\
-        {00FF00}Medis:{FFFFFF}\n/rawatinap /ambulans /resep\n\n\
-        {00FF00}Polisi:{FFFFFF}\n/sidang /putusan /jaksa /pengacara\n\n\
-        {00FF00}Pemerintahan:{FFFFFF}\n/pemerintah /daftarpilkada /pilkada\n\n\
-        {00FF00}Pajak:{FFFFFF}\n/pajak\n\n\
-        {00FF00}Interior:{FFFFFF}\nTekan Y di marker pintu");
+        "{FFFFFF}=== Inferno RP - Commands ===\n\n{00FF00}Umum:{FFFFFF}\n/stats /help\n\n{00FF00}Survival:{FFFFFF}\n/tidur /bangun /makan /minum /obat\n\n{00FF00}Dokumen:{FFFFFF}\n/dokumen /urusdokumen\n\n{00FF00}Handphone:{FFFFFF}\n/hp /sms /call /hangup /topup\n\n{00FF00}Bank:{FFFFFF}\n/bank /atm /kredit /bayarkredit\n\n{00FF00}BBM:{FFFFFF}\n/isibensin /cekbensin\n\n{00FF00}Pekerjaan:{FFFFFF}\n/kerja /quitjob\n\n{00FF00}Medis:{FFFFFF}\n/rawatinap /ambulans /resep\n\n{00FF00}Polisi:{FFFFFF}\n/sidang /putusan /jaksa /pengacara\n\n{00FF00}Pemerintahan:{FFFFFF}\n/pemerintah /daftarpilkada /pilkada\n\n{00FF00}Pajak:{FFFFFF}\n/pajak\n\n{00FF00}Interior:{FFFFFF}\nTekan Y di marker pintu");
     ShowPlayerDialog(playerid, DIALOG_HELP, DIALOG_STYLE_MSGBOX, "{00FF00}Help", str, "Tutup", "");
     return 1;
 }
@@ -1347,9 +1315,7 @@ CMD:dokumen(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[512];
     format(str, sizeof(str),
-        "{FFFFFF}Dokumen Anda:\n\n\
-        KTP: %s\nKK: %s\nSIM: %s\nSTNK: %s\nBPKB: %s\nPaspor: %s\nSIS: %s\nDriveLic: %s\nWeaponLic: %s\n\n\
-        {FFFF00}Pergi ke Balai Kota untuk mengurus dokumen (/urusdokumen).",
+        "{FFFFFF}Dokumen Anda:\n\nKTP: %s\nKK: %s\nSIM: %s\nSTNK: %s\nBPKB: %s\nPaspor: %s\nSIS: %s\nDriveLic: %s\nWeaponLic: %s\n\n{FFFF00}Pergi ke Balai Kota untuk mengurus dokumen (/urusdokumen).",
         PlayerInfo[playerid][pKTP] ? "{00FF00}Ada" : "{FF0000}Tidak",
         PlayerInfo[playerid][pKK] ? "{00FF00}Ada" : "{FF0000}Tidak",
         PlayerInfo[playerid][pSIM] ? "{00FF00}Ada" : "{FF0000}Tidak",
@@ -1376,15 +1342,7 @@ CMD:urusdokumen(playerid, params[])
     }
     new str[512];
     format(str, sizeof(str),
-        "{FFFFFF}Pilih dokumen:\n\
-        1. {00FF00}KTP {FFFFFF}- $10,000\n\
-        2. {00FF00}KK {FFFFFF}- $25,000\n\
-        3. {00FF00}SIM {FFFFFF}- $15,000\n\
-        4. {00FF00}STNK {FFFFFF}- $35,000\n\
-        5. {00FF00}BPKB {FFFFFF}- $50,000\n\
-        6. {00FF00}Paspor {FFFFFF}- $75,000\n\
-        7. {00FF00}SIS (Surat Izin Senjata) {FFFFFF}- $100,000\n\
-        8. {00FF00}Surat Izin Mengemudi {FFFFFF}- $20,000");
+        "{FFFFFF}Pilih dokumen:\n1. {00FF00}KTP {FFFFFF}- $10,000\n2. {00FF00}KK {FFFFFF}- $25,000\n3. {00FF00}SIM {FFFFFF}- $15,000\n4. {00FF00}STNK {FFFFFF}- $35,000\n5. {00FF00}BPKB {FFFFFF}- $50,000\n6. {00FF00}Paspor {FFFFFF}- $75,000\n7. {00FF00}SIS (Surat Izin Senjata) {FFFFFF}- $100,000\n8. {00FF00}Surat Izin Mengemudi {FFFFFF}- $20,000");
     ShowPlayerDialog(playerid, DIALOG_DOCS_APPLY, DIALOG_STYLE_LIST, "{00FF00}Urus Dokumen", str, "Pilih", "Batal");
     return 1;
 }
@@ -1403,8 +1361,7 @@ CMD:bank(playerid, params[])
     }
     new str[256];
     format(str, sizeof(str),
-        "{FFFFFF}Bank Inferno RP\n\nSaldo: $%d\nRekening: %d\n\n\
-        1. Setor Uang\n2. Tarik Uang\n3. Info Kredit\n4. Ajukan KPR\n5. Ajukan KKB\n6. Ajukan KTA\n7. Kartu Kredit",
+        "{FFFFFF}Bank Inferno RP\n\nSaldo: $%d\nRekening: %d\n\n1. Setor Uang\n2. Tarik Uang\n3. Info Kredit\n4. Ajukan KPR\n5. Ajukan KKB\n6. Ajukan KTA\n7. Kartu Kredit",
         PlayerInfo[playerid][pBank], PlayerInfo[playerid][pBankRek]);
     ShowPlayerDialog(playerid, DIALOG_BANK_MENU, DIALOG_STYLE_LIST, "{00FF00}Bank", str, "Pilih", "Tutup");
     return 1;
@@ -1427,12 +1384,7 @@ CMD:kredit(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[512];
     format(str, sizeof(str),
-        "{FFFFFF}Layanan Kredit:\n\n\
-        KPR: %d periode tersisa\n\
-        KKB: %d periode tersisa\n\
-        KTA: %d periode tersisa\n\
-        Kartu Kredit: $%d / $%d\n\n\
-        {FFFF00}Cicilan otomatis dipotong saat payday.",
+        "{FFFFFF}Layanan Kredit:\n\nKPR: %d periode tersisa\nKKB: %d periode tersisa\nKTA: %d periode tersisa\nKartu Kredit: $%d / $%d\n\n{FFFF00}Cicilan otomatis dipotong saat payday.",
         PlayerInfo[playerid][pKPR], PlayerInfo[playerid][pKKB],
         PlayerInfo[playerid][pKTA],
         PlayerInfo[playerid][pCreditUsed], PlayerInfo[playerid][pCreditLimit]);
@@ -1837,11 +1789,7 @@ CMD:pemerintah(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[256];
     format(str, sizeof(str),
-        "{FFFFFF}Status Pemerintahan:\n\n\
-        Pajak PPh: %d%%\n\
-        Gaji PNS: $%d\n\n\
-        Pemilu aktif: %s\n\n\
-        {FFFF00}/daftarpilkada untuk mencalonkan diri\n/pilkada untuk memilih",
+        "{FFFFFF}Status Pemerintahan:\n\nPajak PPh: %d%%\nGaji PNS: $%d\n\nPemilu aktif: %s\n\n{FFFF00}/daftarpilkada untuk mencalonkan diri\n/pilkada untuk memilih",
         gTaxRate, gPNSSalary, gElectionActive ? "Ya" : "Tidak");
     ShowPlayerDialog(playerid, DIALOG_GOVT_MENU, DIALOG_STYLE_MSGBOX, "{00FF00}Pemerintahan", str, "Tutup", "");
     return 1;
@@ -1926,10 +1874,7 @@ CMD:pajak(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[256];
     format(str, sizeof(str),
-        "{FFFFFF}Info Pajak:\n\n\
-        PPh (Pajak Penghasilan): %d%% dari gaji\n\
-        PPN (Pajak Pertambahan Nilai): 11%% dari belanja\n\
-        Pajak Properti: $5,000/rumah, $15,000/bisnis per bulan",
+        "{FFFFFF}Info Pajak:\n\nPPh (Pajak Penghasilan): %d%% dari gaji\nPPN (Pajak Pertambahan Nilai): 11%% dari belanja\nPajak Properti: $5,000/rumah, $15,000/bisnis per bulan",
         gTaxRate);
     ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Pajak", str, "Tutup", "");
     return 1;
@@ -1948,8 +1893,7 @@ CMD:kerja(playerid, params[])
     }
     new str[256];
     format(str, sizeof(str),
-        "{FFFFFF}Pilih Pekerjaan:\n\
-        1. Trucker\n2. Taxi Driver\n3. Mechanic\n4. PNS\n5. Dokter\n6. Polisi");
+        "{FFFFFF}Pilih Pekerjaan:\n1. Trucker\n2. Taxi Driver\n3. Mechanic\n4. PNS\n5. Dokter\n6. Polisi");
     ShowPlayerDialog(playerid, DIALOG_JOB_MENU, DIALOG_STYLE_LIST, "{00FF00}Pekerjaan", str, "Pilih", "Tutup");
     return 1;
 }
@@ -1972,13 +1916,7 @@ CMD:beli(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     new str[512];
     format(str, sizeof(str),
-        "{FFFFFF}Toko Inferno RP:\n\n\
-        1. Makanan - $500 (Hunger +30)\n\
-        2. Minuman - $300 (Thirst +30)\n\
-        3. Obat - $2,000 (Sembuh)\n\
-        4. Handphone - $10,000\n\
-        5. Pulsa $5,000\n\
-        6. Paket Data 1GB - $3,000");
+        "{FFFFFF}Toko Inferno RP:\n\n1. Makanan - $500 (Hunger +30)\n2. Minuman - $300 (Thirst +30)\n3. Obat - $2,000 (Sembuh)\n4. Handphone - $10,000\n5. Pulsa $5,000\n6. Paket Data 1GB - $3,000");
     ShowPlayerDialog(playerid, DIALOG_SHOP_MENU, DIALOG_STYLE_LIST, "{00FF00}Toko", str, "Beli", "Tutup");
     return 1;
 }
