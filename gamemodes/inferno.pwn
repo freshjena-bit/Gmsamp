@@ -29,7 +29,7 @@
 #include <sscanf2>
 #include <a_mysql>
 #include <zcmd>
-#include <foreach>
+// #include <foreach>  // Replaced with for loops
 
 /* =====================================================================
  *  KONFIGURASI UMUM
@@ -358,31 +358,6 @@ stock SendMsg(playerid, color, const text[])
     return 1;
 }
 
-/*
- * SendFmt / SendAllFmt - format pesan lalu kirim.
- * Pawn's format() mendukung variadic args, jadi ini sederhana.
- */
-stock SendFmt(playerid, color, const fmat[], {Float, _}:...)
-{
-    new str[512];
-    format(str, sizeof(str), fmat);
-    SendClientMessage(playerid, color, str);
-    return 1;
-}
-
-stock SendAllFmt(color, const fmat[], {Float, _}:...)
-{
-    new str[512];
-    format(str, sizeof(str), fmat);
-    SendClientMessageToAll(color, str);
-    return 1;
-}
-
-stock SendAllMsg(color, const msg[])
-{
-    SendClientMessageToAll(color, msg);
-    return 1;
-}
 
 /* ---------- Hash password (SHA256) ---------- */
 stock HashPassword(password[], salt[], output[], len = sizeof output)
@@ -933,9 +908,9 @@ public OnPlayerSpawn(playerid)
     SetPlayerColor(playerid, COLOR_GREY);
     PlayerInfo[playerid][pIsSpawned] = true;
 
-    SendFmt(playerid, COLOR_SYSTEM, "Selamat datang, %s! Level: %d | Cash: $%d | Bank: $%d",
-        PlayerInfo[playerid][pName], PlayerInfo[playerid][pLevel],
-        PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank]);
+    new _sf3[512]; format(_sf3, sizeof(_sf3),  "Selamat datang, %s! Level: %d | Cash: $%d | Bank: $%d", 
+        PlayerInfo[playerid][pName],  PlayerInfo[playerid][pLevel], 
+        PlayerInfo[playerid][pCash],  PlayerInfo[playerid][pBank]); SendClientMessage(playerid, COLOR_SYSTEM, _sf3);
     return 1;
 }
 
@@ -1001,7 +976,7 @@ public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 /* --- Survival decay (hunger, thirst, sleep, stamina, sickness) --- */
 public OnSurvivalDecay()
 {
-    foreach (new i : Player)
+    for (new i = 0; i < MAX_PLAYERS; i++) if (IsPlayerConnected(i))
     {
         if (!PlayerInfo[i][pIsLogged] || !PlayerInfo[i][pIsSpawned]) continue;
 
@@ -1075,14 +1050,14 @@ public OnWeatherChange()
     gCurrentWeather = weathers[random(sizeof(weathers))];
     SetWeather(gCurrentWeather);
     if (gCurrentWeather == 8)
-        SendAllFmt(COLOR_BLUE, "[CUACA] Hujan turun! Waspadai sakit flu.");
+        new _sf4[512]; format(_sf4, sizeof(_sf4),  "[CUACA] Hujan turun! Waspadai sakit flu."); SendClientMessageToAll(COLOR_BLUE, _sf4);
     return 1;
 }
 
 /* --- Konsumsi BBM --- */
 public OnFuelConsumption()
 {
-    foreach (new i : Player)
+    for (new i = 0; i < MAX_PLAYERS; i++) if (IsPlayerConnected(i))
     {
         if (!PlayerInfo[i][pIsLogged]) continue;
         if (GetPlayerState(i) != PLAYER_STATE_DRIVER) continue;
@@ -1109,7 +1084,7 @@ public OnFuelConsumption()
 
             if (PVehInfo[pv_idx][pvFuel] < 5.0)
             {
-                SendFmt(i, COLOR_RED, "[BBM] Bensin hampir habis! %.1f liter tersisa.", PVehInfo[pv_idx][pvFuel]);
+                new _sf5[512]; format(_sf5, sizeof(_sf5),  "[BBM] Bensin hampir habis! %.1f liter tersisa.",  PVehInfo[pv_idx][pvFuel]); SendClientMessage(i, COLOR_RED, _sf5);
             }
             if (PVehInfo[pv_idx][pvFuel] <= 0.0)
             {
@@ -1124,7 +1099,7 @@ public OnFuelConsumption()
 /* --- Payday --- */
 public OnPayday()
 {
-    foreach (new i : Player)
+    for (new i = 0; i < MAX_PLAYERS; i++) if (IsPlayerConnected(i))
     {
         if (!PlayerInfo[i][pIsLogged] || !PlayerInfo[i][pIsSpawned]) continue;
 
@@ -1139,7 +1114,7 @@ public OnPayday()
         {
             PlayerInfo[i][pExp] = 0;
             PlayerInfo[i][pLevel]++;
-            SendFmt(i, COLOR_GREEN, "[PAYDAY] Level up! Anda sekarang level %d.", PlayerInfo[i][pLevel]);
+            new _sf6[512]; format(_sf6, sizeof(_sf6),  "[PAYDAY] Level up! Anda sekarang level %d.",  PlayerInfo[i][pLevel]); SendClientMessage(i, COLOR_GREEN, _sf6);
         }
 
         /* Cicilan kredit */
@@ -1150,7 +1125,7 @@ public OnPayday()
             {
                 PlayerInfo[i][pBank] -= cicilan;
                 PlayerInfo[i][pKPR]--;
-                SendFmt(i, COLOR_YELLOW, "[KPR] Cicilan $%d dibayar. Sisa: %d.", cicilan, PlayerInfo[i][pKPR]);
+                new _sf7[512]; format(_sf7, sizeof(_sf7),  "[KPR] Cicilan $%d dibayar. Sisa: %d.",  cicilan,  PlayerInfo[i][pKPR]); SendClientMessage(i, COLOR_YELLOW, _sf7);
             }
             else
                 SendMsg(i, COLOR_RED, "[KPR] Saldo tidak cukup untuk cicilan!");
@@ -1162,7 +1137,7 @@ public OnPayday()
             {
                 PlayerInfo[i][pBank] -= cicilan;
                 PlayerInfo[i][pKKB]--;
-                SendFmt(i, COLOR_YELLOW, "[KKB] Cicilan $%d dibayar. Sisa: %d.", cicilan, PlayerInfo[i][pKKB]);
+                new _sf8[512]; format(_sf8, sizeof(_sf8),  "[KKB] Cicilan $%d dibayar. Sisa: %d.",  cicilan,  PlayerInfo[i][pKKB]); SendClientMessage(i, COLOR_YELLOW, _sf8);
             }
         }
         if (PlayerInfo[i][pKTA] > 0)
@@ -1172,7 +1147,7 @@ public OnPayday()
             {
                 PlayerInfo[i][pBank] -= cicilan;
                 PlayerInfo[i][pKTA]--;
-                SendFmt(i, COLOR_YELLOW, "[KTA] Cicilan $%d dibayar. Sisa: %d.", cicilan, PlayerInfo[i][pKTA]);
+                new _sf9[512]; format(_sf9, sizeof(_sf9),  "[KTA] Cicilan $%d dibayar. Sisa: %d.",  cicilan,  PlayerInfo[i][pKTA]); SendClientMessage(i, COLOR_YELLOW, _sf9);
             }
         }
 
@@ -1184,7 +1159,7 @@ public OnPayday()
         if (PlayerInfo[i][pFaction] == 2 && PlayerInfo[i][pFactionRank] >= 1)
             PlayerInfo[i][pBank] += gPNSSalary;
 
-        SendFmt(i, COLOR_GREEN, "[PAYDAY] Gaji $%d (pajak $%d). Bank: $%d", net, tax, PlayerInfo[i][pBank]);
+        new _sf10[512]; format(_sf10, sizeof(_sf10),  "[PAYDAY] Gaji $%d (pajak $%d). Bank: $%d",  net,  tax,  PlayerInfo[i][pBank]); SendClientMessage(i, COLOR_GREEN, _sf10);
         SavePlayerData(i);
     }
     return 1;
@@ -1512,13 +1487,13 @@ CMD:isibensin(playerid, params[])
     new cost = liters * gFuelTypes[fuel_type][ftPrice];
     if (PlayerInfo[playerid][pCash] < cost)
     {
-        SendFmt(playerid, COLOR_RED, "Butuh $%d untuk %d liter %s. Uang tidak cukup.",
-            cost, liters, gFuelTypes[fuel_type][ftName]);
+        new _sf11[512]; format(_sf11, sizeof(_sf11),  "Butuh $%d untuk %d liter %s. Uang tidak cukup.", 
+            cost,  liters,  gFuelTypes[fuel_type][ftName]); SendClientMessage(playerid, COLOR_RED, _sf11);
         return 1;
     }
     PlayerInfo[playerid][pCash] -= cost;
-    SendFmt(playerid, COLOR_GREEN, "[SPBU] %d liter %s terisi. Biaya: $%d",
-        liters, gFuelTypes[fuel_type][ftName], cost);
+    new _sf12[512]; format(_sf12, sizeof(_sf12),  "[SPBU] %d liter %s terisi. Biaya: $%d", 
+        liters,  gFuelTypes[fuel_type][ftName],  cost); SendClientMessage(playerid, COLOR_GREEN, _sf12);
     return 1;
 }
 
@@ -1531,7 +1506,7 @@ CMD:cekbensin(playerid, params[])
         SendMsg(playerid, COLOR_RED, "Anda harus di dalam kendaraan.");
         return 1;
     }
-    SendFmt(playerid, COLOR_GREEN, "[BENSIN] Kendaraan ID: %d", vid);
+    new _sf13[512]; format(_sf13, sizeof(_sf13),  "[BENSIN] Kendaraan ID: %d",  vid); SendClientMessage(playerid, COLOR_GREEN, _sf13);
     return 1;
 }
 
@@ -1575,7 +1550,7 @@ CMD:sms(playerid, params[])
     }
     /* Cari pemain dengan nomor tersebut */
     new found = -1;
-    foreach (new i : Player)
+    for (new i = 0; i < MAX_PLAYERS; i++) if (IsPlayerConnected(i))
     {
         if (PlayerInfo[i][pIsLogged] && PlayerInfo[i][pPhone] == number)
         {
@@ -1589,8 +1564,8 @@ CMD:sms(playerid, params[])
         return 1;
     }
     PlayerInfo[playerid][pPhoneCredit] -= 100;
-    SendFmt(found, COLOR_YELLOW, "[SMS dari %d] %s", PlayerInfo[playerid][pPhone], msg);
-    SendFmt(playerid, COLOR_GREEN, "[SMS terkirim ke %d] %s", number, msg);
+    new _sf14[512]; format(_sf14, sizeof(_sf14),  "[SMS dari %d] %s",  PlayerInfo[playerid][pPhone],  msg); SendClientMessage(found, COLOR_YELLOW, _sf14);
+    new _sf15[512]; format(_sf15, sizeof(_sf15),  "[SMS terkirim ke %d] %s",  number,  msg); SendClientMessage(playerid, COLOR_GREEN, _sf15);
     return 1;
 }
 
@@ -1606,7 +1581,7 @@ CMD:call(playerid, params[])
         return SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /call [nomor]"), 1;
 
     new found = -1;
-    foreach (new i : Player)
+    for (new i = 0; i < MAX_PLAYERS; i++) if (IsPlayerConnected(i))
     {
         if (PlayerInfo[i][pIsLogged] && PlayerInfo[i][pPhone] == number)
         {
@@ -1620,8 +1595,8 @@ CMD:call(playerid, params[])
     PlayerInfo[playerid][pCallWith] = found;
     PlayerInfo[found][pCalling] = true;
     PlayerInfo[found][pCallWith] = playerid;
-    SendFmt(playerid, COLOR_GREEN, "[CALL] Menghubungi %d...", number);
-    SendFmt(found, COLOR_YELLOW, "[CALL] %d menelepon Anda! /angkat untuk menjawab.", PlayerInfo[playerid][pPhone]);
+    new _sf16[512]; format(_sf16, sizeof(_sf16),  "[CALL] Menghubungi %d...",  number); SendClientMessage(playerid, COLOR_GREEN, _sf16);
+    new _sf17[512]; format(_sf17, sizeof(_sf17),  "[CALL] %d menelepon Anda! /angkat untuk menjawab.",  PlayerInfo[playerid][pPhone]); SendClientMessage(found, COLOR_YELLOW, _sf17);
     return 1;
 }
 
@@ -1631,8 +1606,8 @@ CMD:angkat(playerid, params[])
     if (!PlayerInfo[playerid][pCalling]) return SendMsg(playerid, COLOR_RED, "Tidak ada panggilan masuk."), 1;
     new caller = PlayerInfo[playerid][pCallWith];
     if (caller == INVALID_PLAYER_ID || !IsPlayerConnected(caller)) return SendMsg(playerid, COLOR_RED, "Penelepon offline."), 1;
-    SendFmt(playerid, COLOR_GREEN, "[CALL] Terhubung dengan %d.", PlayerInfo[caller][pPhone]);
-    SendFmt(caller, COLOR_GREEN, "[CALL] Terhubung dengan %d.", PlayerInfo[playerid][pPhone]);
+    new _sf18[512]; format(_sf18, sizeof(_sf18),  "[CALL] Terhubung dengan %d.",  PlayerInfo[caller][pPhone]); SendClientMessage(playerid, COLOR_GREEN, _sf18);
+    new _sf19[512]; format(_sf19, sizeof(_sf19),  "[CALL] Terhubung dengan %d.",  PlayerInfo[playerid][pPhone]); SendClientMessage(caller, COLOR_GREEN, _sf19);
     return 1;
 }
 
@@ -1663,7 +1638,7 @@ CMD:topup(playerid, params[])
         return SendMsg(playerid, COLOR_RED, "Uang cash tidak cukup."), 1;
     PlayerInfo[playerid][pCash] -= amount;
     PlayerInfo[playerid][pPhoneCredit] += amount;
-    SendFmt(playerid, COLOR_GREEN, "[TOPUP] Pulsa +$%d. Total: $%d", amount, PlayerInfo[playerid][pPhoneCredit]);
+    new _sf20[512]; format(_sf20, sizeof(_sf20),  "[TOPUP] Pulsa +$%d. Total: $%d",  amount,  PlayerInfo[playerid][pPhoneCredit]); SendClientMessage(playerid, COLOR_GREEN, _sf20);
     return 1;
 }
 
@@ -1743,8 +1718,8 @@ CMD:resep(playerid, params[])
     PlayerInfo[targetid][pSickness] = 0;
     PlayerInfo[targetid][pSickTime] = 0;
     SetPlayerHealth(targetid, 100.0);
-    SendFmt(targetid, COLOR_GREEN, "[RESEP] Dokter %s memberi obat. Anda sembuh!", PlayerInfo[playerid][pName]);
-    SendFmt(playerid, COLOR_GREEN, "[RESEP] Anda memberi resep ke %s. Fee $2,000.", PlayerInfo[targetid][pName]);
+    new _sf21[512]; format(_sf21, sizeof(_sf21),  "[RESEP] Dokter %s memberi obat. Anda sembuh!",  PlayerInfo[playerid][pName]); SendClientMessage(targetid, COLOR_GREEN, _sf21);
+    new _sf22[512]; format(_sf22, sizeof(_sf22),  "[RESEP] Anda memberi resep ke %s. Fee $2,000.",  PlayerInfo[targetid][pName]); SendClientMessage(playerid, COLOR_GREEN, _sf22);
     return 1;
 }
 
@@ -1786,9 +1761,9 @@ CMD:sidang(playerid, params[])
     CourtCase[caseid][cJailTime] = gArticles[art_idx][aJailTime];
     CourtCase[caseid][cStatus] = 0;
 
-    SendAllFmt(COLOR_YELLOW, "[SIDANG] %s disidang! Pasal: %s | Denda: $%d | Penjara: %d detik",
-        PlayerInfo[targetid][pName], CourtCase[caseid][cArticle],
-        CourtCase[caseid][cFine], CourtCase[caseid][cJailTime]);
+    new _sf23[512]; format(_sf23, sizeof(_sf23),  "[SIDANG] %s disidang! Pasal: %s | Denda: $%d | Penjara: %d detik", 
+        PlayerInfo[targetid][pName],  CourtCase[caseid][cArticle], 
+        CourtCase[caseid][cFine],  CourtCase[caseid][cJailTime]); SendClientMessageToAll(COLOR_YELLOW, _sf23);
     return 1;
 }
 
@@ -1816,8 +1791,8 @@ CMD:putusan(playerid, params[])
     PlayerInfo[suspect][pJailTime] = CourtCase[caseid][cJailTime];
     CourtCase[caseid][cStatus] = 2;
 
-    SendAllFmt(COLOR_RED, "[VONIS] %s dinyatakan BERSALAH! Denda: $%d | Penjara: %d detik",
-        PlayerInfo[suspect][pName], CourtCase[caseid][cFine], CourtCase[caseid][cJailTime]);
+    new _sf24[512]; format(_sf24, sizeof(_sf24),  "[VONIS] %s dinyatakan BERSALAH! Denda: $%d | Penjara: %d detik", 
+        PlayerInfo[suspect][pName],  CourtCase[caseid][cFine],  CourtCase[caseid][cJailTime]); SendClientMessageToAll(COLOR_RED, _sf24);
 
     SetTimerEx("OnCourtEnd", 5000, false, "i", caseid);
     return 1;
@@ -1898,8 +1873,8 @@ CMD:daftarpilkada(playerid, params[])
     strcat(GovCandidate[slot][gPlayerName], PlayerInfo[playerid][pName], MAX_PLAYER_NAME);
     GovCandidate[slot][gVoteCount] = 0;
 
-    SendAllFmt(COLOR_GREEN, "[PEMILU] %s mendaftar sebagai calon %s!",
-        PlayerInfo[playerid][pName], type == 1 ? "Gubernur" : "Walikota");
+    new _sf25[512]; format(_sf25, sizeof(_sf25),  "[PEMILU] %s mendaftar sebagai calon %s!", 
+        PlayerInfo[playerid][pName],  type == 1 ? "Gubernur" : "Walikota"); SendClientMessageToAll(COLOR_GREEN, _sf25);
     return 1;
 }
 
@@ -1961,7 +1936,7 @@ CMD:kerja(playerid, params[])
     if (!PlayerInfo[playerid][pIsLogged]) return 1;
     if (PlayerInfo[playerid][pJob] != 0)
     {
-        SendFmt(playerid, COLOR_YELLOW, "Anda sudah punya pekerjaan (Job: %d). /quitjob untuk berhenti.", PlayerInfo[playerid][pJob]);
+        new _sf26[512]; format(_sf26, sizeof(_sf26),  "Anda sudah punya pekerjaan (Job: %d). /quitjob untuk berhenti.",  PlayerInfo[playerid][pJob]); SendClientMessage(playerid, COLOR_YELLOW, _sf26);
         return 1;
     }
     new str[256];
@@ -2081,12 +2056,12 @@ public OnElectionEnd()
     }
     if (winner == -1)
     {
-        SendAllMsg(COLOR_RED, "[PEMILU] Tidak ada pemenang.");
+        SendClientMessageToAll(COLOR_RED, "[PEMILU] Tidak ada pemenang.");
         return 1;
     }
-    SendAllFmt(COLOR_GREEN, "[PEMILU] %s terpilih sebagai %s!",
-        GovCandidate[winner][gPlayerName],
-        GovCandidate[winner][gType] == 1 ? "Gubernur" : "Walikota");
+    new _sf27[512]; format(_sf27, sizeof(_sf27),  "[PEMILU] %s terpilih sebagai %s!", 
+        GovCandidate[winner][gPlayerName], 
+        GovCandidate[winner][gType] == 1 ? "Gubernur" : "Walikota"); SendClientMessageToAll(COLOR_GREEN, _sf27);
     return 1;
 }
 
