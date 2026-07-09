@@ -546,108 +546,160 @@ stock CreateInteriorPoint(const label[],
 }
 
 /* =====================================================================
- *  TEXTDRAW HUD SYSTEM
+ *  TEXTDRAW HUD SYSTEM (FiveM-Style Modern HUD)
  * =====================================================================*/
+
+/* Helper: build progress bar string from 0-100 */
+stock BuildBar(Float:value, max_val, bar_size)
+{
+    new bars = floatround((value / max_val) * float(bar_size));
+    if (bars < 0) bars = 0;
+    if (bars > bar_size) bars = bar_size;
+    new result[32];
+    result[0] = EOS;
+    for (new j = 0; j < bars; j++)
+        strcat(result, "l", sizeof(result));
+    for (new j = bars; j < bar_size; j++)
+        strcat(result, ".", sizeof(result));
+    return result;
+}
+
+/* Helper: get color based on value (green/yellow/red) */
+stock GetStatusColor(Float:value)
+{
+    if (value >= 60.0) return 0x00FF00FF; /* Green */
+    if (value >= 30.0) return 0xFFFF00FF; /* Yellow */
+    return 0xFF0000FF; /* Red */
+}
+
 stock CreateHUDTextDraws()
 {
-    /* Background box (bottom left) */
-    TD_Box = TextDrawCreate(20.0, 160.0, "_");
+    /* === LEFT PANEL: Survival Stats (bottom-left, FiveM style) === */
+    /* Dark transparent background */
+    TD_Box = TextDrawCreate(10.0, 340.0, "_");
     TextDrawUseBox(TD_Box, 1);
-    TextDrawBoxColor(TD_Box, 0x000000AA);
-    TextDrawTextSize(TD_Box, 180.0, 0.0);
-    TextDrawLetterSize(TD_Box, 0.5, 9.5);
+    TextDrawBoxColor(TD_Box, 0x00000088);
+    TextDrawTextSize(TD_Box, 150.0, 0.0);
+    TextDrawLetterSize(TD_Box, 0.5, 6.5);
     TextDrawSetShadow(TD_Box, 0);
 
-    /* Server name header */
-    TD_ServerName = TextDrawCreate(25.0, 162.0, "~g~Inferno RP~w~ v2.0");
-    TextDrawLetterSize(TD_ServerName, 0.25, 1.0);
-    TextDrawSetShadow(TD_ServerName, 1);
+    /* Server name - modern small font */
+    TD_ServerName = TextDrawCreate(15.0, 342.0, "~b~~h~INFERNO~w~ RP");
+    TextDrawLetterSize(TD_ServerName, 0.18, 0.8);
+    TextDrawSetShadow(TD_ServerName, 0);
+    TextDrawSetOutline(TD_ServerName, 1);
 
-    /* Labels */
-    TD_Health = TextDrawCreate(25.0, 178.0, "~r~Health:");
-    TextDrawLetterSize(TD_Health, 0.20, 0.9);
-    TextDrawSetShadow(TD_Health, 1);
+    /* Status labels with icons */
+    TD_Health = TextDrawCreate(15.0, 358.0, "~r~HP");
+    TextDrawLetterSize(TD_Health, 0.16, 0.75);
+    TextDrawSetShadow(TD_Health, 0);
+    TextDrawSetOutline(TD_Health, 1);
 
-    TD_Armor = TextDrawCreate(25.0, 190.0, "~b~Armor:");
-    TextDrawLetterSize(TD_Armor, 0.20, 0.9);
-    TextDrawSetShadow(TD_Armor, 1);
+    TD_Armor = TextDrawCreate(15.0, 370.0, "~b~AR");
+    TextDrawLetterSize(TD_Armor, 0.16, 0.75);
+    TextDrawSetShadow(TD_Armor, 0);
+    TextDrawSetOutline(TD_Armor, 1);
 
-    TD_Hunger = TextDrawCreate(25.0, 202.0, "~o~Hunger:");
-    TextDrawLetterSize(TD_Hunger, 0.20, 0.9);
-    TextDrawSetShadow(TD_Hunger, 1);
+    TD_Hunger = TextDrawCreate(15.0, 382.0, "~o~FD");
+    TextDrawLetterSize(TD_Hunger, 0.16, 0.75);
+    TextDrawSetShadow(TD_Hunger, 0);
+    TextDrawSetOutline(TD_Hunger, 1);
 
-    TD_Thirst = TextDrawCreate(25.0, 214.0, "~b~Thirst:");
-    TextDrawLetterSize(TD_Thirst, 0.20, 0.9);
-    TextDrawSetShadow(TD_Thirst, 1);
+    TD_Thirst = TextDrawCreate(15.0, 394.0, "~c~WT");
+    TextDrawLetterSize(TD_Thirst, 0.16, 0.75);
+    TextDrawSetShadow(TD_Thirst, 0);
+    TextDrawSetOutline(TD_Thirst, 1);
 
-    TD_Sleep = TextDrawCreate(25.0, 226.0, "~p~Sleep:");
-    TextDrawLetterSize(TD_Sleep, 0.20, 0.9);
-    TextDrawSetShadow(TD_Sleep, 1);
+    TD_Sleep = TextDrawCreate(15.0, 406.0, "~p~SL");
+    TextDrawLetterSize(TD_Sleep, 0.16, 0.75);
+    TextDrawSetShadow(TD_Sleep, 0);
+    TextDrawSetOutline(TD_Sleep, 1);
 
-    TD_Stamina = TextDrawCreate(25.0, 238.0, "~g~Stamina:");
-    TextDrawLetterSize(TD_Stamina, 0.20, 0.9);
-    TextDrawSetShadow(TD_Stamina, 1);
+    TD_Stamina = TextDrawCreate(15.0, 418.0, "~g~ST");
+    TextDrawLetterSize(TD_Stamina, 0.16, 0.75);
+    TextDrawSetShadow(TD_Stamina, 0);
+    TextDrawSetOutline(TD_Stamina, 1);
 
-    /* Right side info */
-    TD_Cash = TextDrawCreate(500.0, 162.0, "~g~Cash: $0");
-    TextDrawLetterSize(TD_Cash, 0.22, 0.9);
-    TextDrawSetShadow(TD_Cash, 1);
+    /* === RIGHT PANEL: Player Info (top-right, FiveM style) === */
+    TD_Cash = TextDrawCreate(620.0, 5.0, "~g~~h~$0");
+    TextDrawLetterSize(TD_Cash, 0.28, 1.1);
+    TextDrawSetShadow(TD_Cash, 0);
+    TextDrawSetOutline(TD_Cash, 1);
+    TextDrawAlignment(TD_Cash, 3);
 
-    TD_Bank = TextDrawCreate(500.0, 174.0, "~b~Bank: $0");
-    TextDrawLetterSize(TD_Bank, 0.22, 0.9);
-    TextDrawSetShadow(TD_Bank, 1);
+    TD_Bank = TextDrawCreate(620.0, 20.0, "~b~~h~Bank: $0");
+    TextDrawLetterSize(TD_Bank, 0.16, 0.75);
+    TextDrawSetShadow(TD_Bank, 0);
+    TextDrawSetOutline(TD_Bank, 1);
+    TextDrawAlignment(TD_Bank, 3);
 
-    TD_Level = TextDrawCreate(500.0, 186.0, "~w~Level: 1");
-    TextDrawLetterSize(TD_Level, 0.22, 0.9);
-    TextDrawSetShadow(TD_Level, 1);
+    TD_Level = TextDrawCreate(620.0, 33.0, "~w~Lvl 1");
+    TextDrawLetterSize(TD_Level, 0.16, 0.75);
+    TextDrawSetShadow(TD_Level, 0);
+    TextDrawSetOutline(TD_Level, 1);
+    TextDrawAlignment(TD_Level, 3);
 
-    TD_Job = TextDrawCreate(500.0, 198.0, "~w~Job: Tidak Bekerja");
-    TextDrawLetterSize(TD_Job, 0.22, 0.9);
-    TextDrawSetShadow(TD_Job, 1);
+    TD_Job = TextDrawCreate(620.0, 46.0, "~w~Job: -");
+    TextDrawLetterSize(TD_Job, 0.16, 0.75);
+    TextDrawSetShadow(TD_Job, 0);
+    TextDrawSetOutline(TD_Job, 1);
+    TextDrawAlignment(TD_Job, 3);
 
-    TD_Phone = TextDrawCreate(500.0, 210.0, "~w~HP: - | Pulsa: $0");
-    TextDrawLetterSize(TD_Phone, 0.22, 0.9);
-    TextDrawSetShadow(TD_Phone, 1);
+    TD_Phone = TextDrawCreate(620.0, 59.0, "~w~HP: -");
+    TextDrawLetterSize(TD_Phone, 0.16, 0.75);
+    TextDrawSetShadow(TD_Phone, 0);
+    TextDrawSetOutline(TD_Phone, 1);
+    TextDrawAlignment(TD_Phone, 3);
 
-    TD_Clock = TextDrawCreate(580.0, 5.0, "00:00");
-    TextDrawLetterSize(TD_Clock, 0.35, 1.2);
-    TextDrawSetShadow(TD_Clock, 1);
+    /* Clock - top center */
+    TD_Clock = TextDrawCreate(320.0, 5.0, "00:00");
+    TextDrawLetterSize(TD_Clock, 0.35, 1.3);
+    TextDrawSetShadow(TD_Clock, 0);
+    TextDrawSetOutline(TD_Clock, 1);
+    TextDrawAlignment(TD_Clock, 2);
 
-    print("[InfernoRP] TextDraw HUD created.");
+    print("[InfernoRP] Modern FiveM-style TextDraw HUD created.");
 }
 
 stock CreatePlayerHUD(playerid)
 {
-    /* Player-specific bars (progress bar style) */
-    TD_PHealth[playerid] = CreatePlayerTextDraw(playerid, 80.0, 178.0, "100");
-    PlayerTextDrawLetterSize(playerid, TD_PHealth[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PHealth[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PHealth[playerid], 1);
+    /* Player-specific progress bars (right side of labels) */
+    /* Using box-style bars for visual progress like FiveM */
+    TD_PHealth[playerid] = CreatePlayerTextDraw(playerid, 40.0, 358.0, "llllllllllllllllllll");
+    PlayerTextDrawLetterSize(playerid, TD_PHealth[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PHealth[playerid], 0x00FF00FF);
+    PlayerTextDrawSetShadow(playerid, TD_PHealth[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PHealth[playerid], 0);
 
-    TD_PArmor[playerid] = CreatePlayerTextDraw(playerid, 80.0, 190.0, "0");
-    PlayerTextDrawLetterSize(playerid, TD_PArmor[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PArmor[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PArmor[playerid], 1);
+    TD_PArmor[playerid] = CreatePlayerTextDraw(playerid, 40.0, 370.0, "....................");
+    PlayerTextDrawLetterSize(playerid, TD_PArmor[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PArmor[playerid], 0x00AAFFFF);
+    PlayerTextDrawSetShadow(playerid, TD_PArmor[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PArmor[playerid], 0);
 
-    TD_PHunger[playerid] = CreatePlayerTextDraw(playerid, 80.0, 202.0, "100");
-    PlayerTextDrawLetterSize(playerid, TD_PHunger[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PHunger[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PHunger[playerid], 1);
+    TD_PHunger[playerid] = CreatePlayerTextDraw(playerid, 40.0, 382.0, "llllllllllllllllllll");
+    PlayerTextDrawLetterSize(playerid, TD_PHunger[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PHunger[playerid], 0xFFAA00FF);
+    PlayerTextDrawSetShadow(playerid, TD_PHunger[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PHunger[playerid], 0);
 
-    TD_PThirst[playerid] = CreatePlayerTextDraw(playerid, 80.0, 214.0, "100");
-    PlayerTextDrawLetterSize(playerid, TD_PThirst[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PThirst[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PThirst[playerid], 1);
+    TD_PThirst[playerid] = CreatePlayerTextDraw(playerid, 40.0, 394.0, "llllllllllllllllllll");
+    PlayerTextDrawLetterSize(playerid, TD_PThirst[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PThirst[playerid], 0x00DDDDFF);
+    PlayerTextDrawSetShadow(playerid, TD_PThirst[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PThirst[playerid], 0);
 
-    TD_PSleep[playerid] = CreatePlayerTextDraw(playerid, 80.0, 226.0, "100");
-    PlayerTextDrawLetterSize(playerid, TD_PSleep[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PSleep[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PSleep[playerid], 1);
+    TD_PSleep[playerid] = CreatePlayerTextDraw(playerid, 40.0, 406.0, "llllllllllllllllllll");
+    PlayerTextDrawLetterSize(playerid, TD_PSleep[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PSleep[playerid], 0xAA00AAFF);
+    PlayerTextDrawSetShadow(playerid, TD_PSleep[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PSleep[playerid], 0);
 
-    TD_PStamina[playerid] = CreatePlayerTextDraw(playerid, 80.0, 238.0, "100");
-    PlayerTextDrawLetterSize(playerid, TD_PStamina[playerid], 0.18, 0.85);
-    PlayerTextDrawColor(playerid, TD_PStamina[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_PStamina[playerid], 1);
+    TD_PStamina[playerid] = CreatePlayerTextDraw(playerid, 40.0, 418.0, "llllllllllllllllllll");
+    PlayerTextDrawLetterSize(playerid, TD_PStamina[playerid], 0.14, 0.7);
+    PlayerTextDrawColor(playerid, TD_PStamina[playerid], 0x00FF00FF);
+    PlayerTextDrawSetShadow(playerid, TD_PStamina[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_PStamina[playerid], 0);
 }
 
 stock ShowPlayerHUD(playerid)
@@ -705,7 +757,7 @@ public OnHUDUpdate()
     new hour, minute;
     gettime(hour, minute);
 
-    /* Update clock for all players */
+    /* Update clock */
     format(str, sizeof(str), "%02d:%02d", hour, minute);
     TextDrawSetString(TD_Clock, str);
 
@@ -714,71 +766,85 @@ public OnHUDUpdate()
         if (!IsPlayerConnected(i)) continue;
         if (!PlayerInfo[i][pIsLogged] || !PlayerInfo[i][pIsSpawned]) continue;
 
-        /* Update health */
+        /* Update health bar */
         GetPlayerHealth(i, PlayerInfo[i][pHealth]);
+        new hp_bar[32];
+        hp_bar[0] = EOS;
+        strcat(hp_bar, BuildBar(PlayerInfo[i][pHealth], 100.0, 20), sizeof(hp_bar));
+        PlayerTextDrawSetString(i, TD_PHealth[i], hp_bar);
+        PlayerTextDrawColor(i, TD_PHealth[i], GetStatusColor(PlayerInfo[i][pHealth]));
+
+        /* Update armor bar */
         GetPlayerArmour(i, PlayerInfo[i][pArmor]);
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pHealth]);
-        PlayerTextDrawSetString(i, TD_PHealth[i], str);
+        new ar_bar[32];
+        ar_bar[0] = EOS;
+        strcat(ar_bar, BuildBar(PlayerInfo[i][pArmor], 100.0, 20), sizeof(ar_bar));
+        PlayerTextDrawSetString(i, TD_PArmor[i], ar_bar);
 
-        /* Update armor */
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pArmor]);
-        PlayerTextDrawSetString(i, TD_PArmor[i], str);
+        /* Update hunger bar */
+        new hg_bar[32];
+        hg_bar[0] = EOS;
+        strcat(hg_bar, BuildBar(PlayerInfo[i][pHunger], 100.0, 20), sizeof(hg_bar));
+        PlayerTextDrawSetString(i, TD_PHunger[i], hg_bar);
 
-        /* Update hunger */
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pHunger]);
-        PlayerTextDrawSetString(i, TD_PHunger[i], str);
+        /* Update thirst bar */
+        new th_bar[32];
+        th_bar[0] = EOS;
+        strcat(th_bar, BuildBar(PlayerInfo[i][pThirst], 100.0, 20), sizeof(th_bar));
+        PlayerTextDrawSetString(i, TD_PThirst[i], th_bar);
 
-        /* Update thirst */
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pThirst]);
-        PlayerTextDrawSetString(i, TD_PThirst[i], str);
+        /* Update sleep bar */
+        new sl_bar[32];
+        sl_bar[0] = EOS;
+        strcat(sl_bar, BuildBar(PlayerInfo[i][pSleep], 100.0, 20), sizeof(sl_bar));
+        PlayerTextDrawSetString(i, TD_PSleep[i], sl_bar);
 
-        /* Update sleep */
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pSleep]);
-        PlayerTextDrawSetString(i, TD_PSleep[i], str);
+        /* Update stamina bar */
+        new st_bar[32];
+        st_bar[0] = EOS;
+        strcat(st_bar, BuildBar(PlayerInfo[i][pStamina], 100.0, 20), sizeof(st_bar));
+        PlayerTextDrawSetString(i, TD_PStamina[i], st_bar);
+        PlayerTextDrawColor(i, TD_PStamina[i], GetStatusColor(PlayerInfo[i][pStamina]));
 
-        /* Update stamina */
-        format(str, sizeof(str), "%.0f", PlayerInfo[i][pStamina]);
-        PlayerTextDrawSetString(i, TD_PStamina[i], str);
-
-        /* Update cash */
-        new _sf_hud1[128]; format(_sf_hud1, sizeof(_sf_hud1), "~g~Cash: $%d", PlayerInfo[i][pCash]);
+        /* Update cash (large, top-right) */
+        new _sf_hud1[64]; format(_sf_hud1, sizeof(_sf_hud1), "~g~~h~$%d", PlayerInfo[i][pCash]);
         TextDrawSetString(TD_Cash, _sf_hud1);
 
         /* Update bank */
-        new _sf_hud2[128]; format(_sf_hud2, sizeof(_sf_hud2), "~b~Bank: $%d", PlayerInfo[i][pBank]);
+        new _sf_hud2[64]; format(_sf_hud2, sizeof(_sf_hud2), "~b~Bank: $%d", PlayerInfo[i][pBank]);
         TextDrawSetString(TD_Bank, _sf_hud2);
 
         /* Update level */
-        new _sf_hud3[128]; format(_sf_hud3, sizeof(_sf_hud3), "~w~Level: %d (Exp: %d)", PlayerInfo[i][pLevel], PlayerInfo[i][pExp]);
+        new _sf_hud3[64]; format(_sf_hud3, sizeof(_sf_hud3), "~w~Lvl %d (Exp:%d)", PlayerInfo[i][pLevel], PlayerInfo[i][pExp]);
         TextDrawSetString(TD_Level, _sf_hud3);
 
         /* Update job */
         new job_name[32];
+        job_name[0] = EOS;
         if (PlayerInfo[i][pJob] >= 0 && PlayerInfo[i][pJob] < sizeof(gJobNames))
         {
-            job_name[0] = EOS;
             strcat(job_name, gJobNames[PlayerInfo[i][pJob]], 32);
         }
         else
         {
-            job_name = "Unknown";
+            strcat(job_name, "Unknown", 32);
         }
-        new _sf_hud4[128]; format(_sf_hud4, sizeof(_sf_hud4), "~w~Job: %s", job_name);
+        new _sf_hud4[64]; format(_sf_hud4, sizeof(_sf_hud4), "~w~Job: %s", job_name);
         TextDrawSetString(TD_Job, _sf_hud4);
 
         /* Update phone */
-        new _sf_hud5[128];
+        new _sf_hud5[64];
         if (PlayerInfo[i][pPhone] > 0)
         {
-            format(_sf_hud5, sizeof(_sf_hud5), "~w~HP: %d | Pulsa: $%d", PlayerInfo[i][pPhone], PlayerInfo[i][pPhoneCredit]);
+            format(_sf_hud5, sizeof(_sf_hud5), "~w~HP: %d ~g~$%d", PlayerInfo[i][pPhone], PlayerInfo[i][pPhoneCredit]);
         }
         else
         {
-            _sf_hud5 = "~r~HP: Tidak ada";
+            _sf_hud5 = "~r~HP: -";
         }
         TextDrawSetString(TD_Phone, _sf_hud5);
 
-        /* Update speedometer if driving */
+        /* Update speedometer */
         UpdateSpeedo(i);
     }
     return 1;
@@ -3046,10 +3112,13 @@ new PlayerText:TD_Speedo[MAX_PLAYERS];
 
 stock CreateSpeedo(playerid)
 {
-    TD_Speedo[playerid] = CreatePlayerTextDraw(playerid, 500.0, 380.0, "_");
-    PlayerTextDrawLetterSize(playerid, TD_Speedo[playerid], 0.3, 1.2);
+    /* Modern speedometer - bottom right, FiveM style */
+    TD_Speedo[playerid] = CreatePlayerTextDraw(playerid, 530.0, 400.0, "_");
+    PlayerTextDrawLetterSize(playerid, TD_Speedo[playerid], 0.25, 1.0);
     PlayerTextDrawColor(playerid, TD_Speedo[playerid], 0xFFFFFFFF);
-    PlayerTextDrawSetShadow(playerid, TD_Speedo[playerid], 1);
+    PlayerTextDrawSetShadow(playerid, TD_Speedo[playerid], 0);
+    PlayerTextDrawSetOutline(playerid, TD_Speedo[playerid], 1);
+    PlayerTextDrawAlignment(playerid, TD_Speedo[playerid], 3);
 }
 
 stock UpdateSpeedo(playerid)
@@ -3063,8 +3132,16 @@ stock UpdateSpeedo(playerid)
     new Float:vx, Float:vy, Float:vz;
     GetVehicleVelocity(vid, vx, vy, vz);
     new speed = floatround(floatsqroot(vx*vx + vy*vy + vz*vz) * 200.0);
+
+    /* Color based on speed: green=normal, yellow=fast, red=very fast */
+    new speed_color[8];
+    speed_color[0] = EOS;
+    if (speed < 60) strcat(speed_color, "~g~", sizeof(speed_color));
+    else if (speed < 120) strcat(speed_color, "~y~", sizeof(speed_color));
+    else strcat(speed_color, "~r~", sizeof(speed_color));
+
     new _sf_sp[128];
-    format(_sf_sp, sizeof(_sf_sp), "~w~Kecepatan: ~g~%d km/h", speed);
+    format(_sf_sp, sizeof(_sf_sp), "%s%d ~w~km/h", speed_color, speed);
     PlayerTextDrawSetString(playerid, TD_Speedo[playerid], _sf_sp);
     PlayerTextDrawShow(playerid, TD_Speedo[playerid]);
 }
