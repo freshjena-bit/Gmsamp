@@ -1582,6 +1582,7 @@ public OnPlayerSpawn(playerid)
     /* --- Show TextDraw HUD --- */
     CreatePlayerHUD(playerid);
     CreateSpeedo(playerid);
+    CreatePlayerPhoneIcons(playerid);
     ShowPlayerHUD(playerid);
 
     new _sf3[512]; format(_sf3, sizeof(_sf3),  "Selamat datang, %s! Level: %d | Cash: $%d | Bank: $%d", 
@@ -3452,6 +3453,384 @@ CMD:tppos(playerid, params[])
 }
 
 /* =====================================================================
+ *  MODERN SMARTPHONE TEXTDRAW SYSTEM (with 3D Model Icons)
+ * =====================================================================*/
+
+new Text:PhoneBg;
+new Text:PhoneScreen;
+new Text:PhoneNotch;
+new Text:PhoneStatusBar;
+new Text:PhoneTime;
+new Text:PhoneBattery;
+new Text:PhoneSignal;
+new Text:PhoneHeader;
+new Text:PhoneDockBg;
+new Text:PhoneHomeBtn;
+new Text:PhoneAppBg[6];
+new Text:PhoneAppLabel[6];
+new PlayerText:PhoneAppIcon[MAX_PLAYERS][6];
+new bool:gPhoneOpen[MAX_PLAYERS];
+
+new PlayerText:KTP_Card[MAX_PLAYERS];
+new PlayerText:KTP_Title[MAX_PLAYERS];
+new PlayerText:KTP_Photo[MAX_PLAYERS];
+new PlayerText:KTP_Name[MAX_PLAYERS];
+new PlayerText:KTP_NIK[MAX_PLAYERS];
+new PlayerText:KTP_Detail[MAX_PLAYERS];
+new bool:gKTPOpen[MAX_PLAYERS];
+
+new PlayerText:STAT_Card[MAX_PLAYERS];
+new PlayerText:STAT_Title[MAX_PLAYERS];
+new PlayerText:STAT_Line1[MAX_PLAYERS];
+new PlayerText:STAT_Line2[MAX_PLAYERS];
+new PlayerText:STAT_Line3[MAX_PLAYERS];
+new PlayerText:STAT_Line4[MAX_PLAYERS];
+new PlayerText:STAT_Line5[MAX_PLAYERS];
+new bool:gStatOpen[MAX_PLAYERS];
+
+#define ICON_BANK     1274
+#define ICON_SMS      330
+#define ICON_CALL     330
+#define ICON_GPS      411
+#define ICON_SHOP     2653
+#define ICON_DOCS     1582
+
+new Float:gAppPosX[6] = {265.0, 305.0, 345.0, 265.0, 305.0, 345.0};
+new Float:gAppPosY[6] = {180.0, 180.0, 180.0, 235.0, 235.0, 235.0};
+new gAppModels[6] = {ICON_BANK, ICON_SMS, ICON_CALL, ICON_GPS, ICON_SHOP, ICON_DOCS};
+
+stock CreatePhoneTextDraws()
+{
+    PhoneBg = TextDrawCreate(255.0, 130.0, "_");
+    TextDrawUseBox(PhoneBg, 1);
+    TextDrawBoxColor(PhoneBg, 0x000000FF);
+    TextDrawTextSize(PhoneBg, 385.0, 0.0);
+    TextDrawLetterSize(PhoneBg, 0.5, 25.0);
+    TextDrawSetShadow(PhoneBg, 0);
+
+    PhoneScreen = TextDrawCreate(260.0, 135.0, "_");
+    TextDrawUseBox(PhoneScreen, 1);
+    TextDrawBoxColor(PhoneScreen, 0x004D40DD);
+    TextDrawTextSize(PhoneScreen, 380.0, 0.0);
+    TextDrawLetterSize(PhoneScreen, 0.5, 24.0);
+    TextDrawSetShadow(PhoneScreen, 0);
+
+    PhoneNotch = TextDrawCreate(305.0, 135.0, "_");
+    TextDrawUseBox(PhoneNotch, 1);
+    TextDrawBoxColor(PhoneNotch, 0x000000FF);
+    TextDrawTextSize(PhoneNotch, 335.0, 0.0);
+    TextDrawLetterSize(PhoneNotch, 0.5, 0.6);
+    TextDrawSetShadow(PhoneNotch, 0);
+
+    PhoneStatusBar = TextDrawCreate(260.0, 142.0, "_");
+    TextDrawUseBox(PhoneStatusBar, 1);
+    TextDrawBoxColor(PhoneStatusBar, 0x00695CFF);
+    TextDrawTextSize(PhoneStatusBar, 380.0, 0.0);
+    TextDrawLetterSize(PhoneStatusBar, 0.5, 0.8);
+    TextDrawSetShadow(PhoneStatusBar, 0);
+
+    PhoneTime = TextDrawCreate(265.0, 143.0, "00:00");
+    TextDrawLetterSize(PhoneTime, 0.16, 0.65);
+    TextDrawColor(PhoneTime, 0xFFFFFFFF);
+    TextDrawSetShadow(PhoneTime, 0);
+
+    PhoneBattery = TextDrawCreate(365.0, 144.0, "_");
+    TextDrawUseBox(PhoneBattery, 1);
+    TextDrawBoxColor(PhoneBattery, 0x4CAF50FF);
+    TextDrawTextSize(PhoneBattery, 375.0, 0.0);
+    TextDrawLetterSize(PhoneBattery, 0.3, 0.35);
+    TextDrawSetShadow(PhoneBattery, 0);
+
+    PhoneSignal = TextDrawCreate(350.0, 143.0, "~w~...");
+    TextDrawLetterSize(PhoneSignal, 0.12, 0.6);
+    TextDrawSetShadow(PhoneSignal, 0);
+
+    PhoneHeader = TextDrawCreate(320.0, 155.0, "~w~~h~INFERNO Phone");
+    TextDrawLetterSize(PhoneHeader, 0.18, 0.85);
+    TextDrawSetShadow(PhoneHeader, 0);
+    TextDrawAlignment(PhoneHeader, 2);
+
+    new appNames[6][12] = {"Bank", "SMS", "Telepon", "GPS", "Toko", "Dokumen"};
+    for (new i = 0; i < 6; i++)
+    {
+        PhoneAppBg[i] = TextDrawCreate(gAppPosX[i], gAppPosY[i], "_");
+        TextDrawUseBox(PhoneAppBg[i], 1);
+        TextDrawBoxColor(PhoneAppBg[i], 0x37474FFF);
+        TextDrawTextSize(PhoneAppBg[i], gAppPosX[i] + 30.0, 0.0);
+        TextDrawLetterSize(PhoneAppBg[i], 0.5, 2.2);
+        TextDrawSetShadow(PhoneAppBg[i], 0);
+        TextDrawSetSelectable(PhoneAppBg[i], 1);
+
+        new Float:lblY = gAppPosY[i] + 18.0;
+        PhoneAppLabel[i] = TextDrawCreate(gAppPosX[i] + 15.0, lblY, appNames[i]);
+        TextDrawLetterSize(PhoneAppLabel[i], 0.11, 0.5);
+        TextDrawColor(PhoneAppLabel[i], 0xB0BEC5FF);
+        TextDrawSetShadow(PhoneAppLabel[i], 0);
+        TextDrawAlignment(PhoneAppLabel[i], 2);
+    }
+
+    PhoneDockBg = TextDrawCreate(260.0, 295.0, "_");
+    TextDrawUseBox(PhoneDockBg, 1);
+    TextDrawBoxColor(PhoneDockBg, 0x003328FF);
+    TextDrawTextSize(PhoneDockBg, 380.0, 0.0);
+    TextDrawLetterSize(PhoneDockBg, 0.5, 2.5);
+    TextDrawSetShadow(PhoneDockBg, 0);
+
+    PhoneHomeBtn = TextDrawCreate(310.0, 305.0, "_");
+    TextDrawUseBox(PhoneHomeBtn, 1);
+    TextDrawBoxColor(PhoneHomeBtn, 0xB0BEC5FF);
+    TextDrawTextSize(PhoneHomeBtn, 330.0, 0.0);
+    TextDrawLetterSize(PhoneHomeBtn, 0.5, 1.2);
+    TextDrawSetShadow(PhoneHomeBtn, 0);
+
+    print("[InfernoRP] Phone with 3D model icons created.");
+}
+
+stock CreatePlayerPhoneIcons(playerid)
+{
+    for (new i = 0; i < 6; i++)
+    {
+        PhoneAppIcon[playerid][i] = CreatePlayerTextDraw(playerid, gAppPosX[i] + 2.0, gAppPosY[i] + 1.0, "_");
+        PlayerTextDrawFont(playerid, PhoneAppIcon[playerid][i], 5);
+        PlayerTextDrawColor(playerid, PhoneAppIcon[playerid][i], 0xFFFFFFFF);
+        PlayerTextDrawBackgroundColor(playerid, PhoneAppIcon[playerid][i], 0x00000000);
+        PlayerTextDrawTextSize(playerid, PhoneAppIcon[playerid][i], gAppPosX[i] + 28.0, gAppPosY[i] + 17.0);
+        PlayerTextDrawSetPreviewModel(playerid, PhoneAppIcon[playerid][i], gAppModels[i]);
+        if (i == 2)
+            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], 0.0, 0.0, 90.0, 1.0);
+        else if (i == 3)
+            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], -15.0, 0.0, -45.0, 0.8);
+        else
+            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], -10.0, 0.0, 0.0, 1.0);
+    }
+}
+
+stock ShowPhoneUI(playerid)
+{
+    if (gPhoneOpen[playerid]) return;
+    if (PlayerInfo[playerid][pPhone] == 0) return;
+    gPhoneOpen[playerid] = true;
+    new hour, minute;
+    new tstr[16];
+    gettime(hour, minute);
+    format(tstr, sizeof(tstr), "%02d:%02d", hour, minute);
+    TextDrawSetString(PhoneTime, tstr);
+    TextDrawShowForPlayer(playerid, PhoneBg);
+    TextDrawShowForPlayer(playerid, PhoneScreen);
+    TextDrawShowForPlayer(playerid, PhoneNotch);
+    TextDrawShowForPlayer(playerid, PhoneStatusBar);
+    TextDrawShowForPlayer(playerid, PhoneTime);
+    TextDrawShowForPlayer(playerid, PhoneBattery);
+    TextDrawShowForPlayer(playerid, PhoneSignal);
+    TextDrawShowForPlayer(playerid, PhoneHeader);
+    for (new i = 0; i < 6; i++)
+    {
+        TextDrawShowForPlayer(playerid, PhoneAppBg[i]);
+        TextDrawShowForPlayer(playerid, PhoneAppLabel[i]);
+        PlayerTextDrawShow(playerid, PhoneAppIcon[playerid][i]);
+    }
+    TextDrawShowForPlayer(playerid, PhoneDockBg);
+    TextDrawShowForPlayer(playerid, PhoneHomeBtn);
+    SelectTextDraw(playerid, 0x00897BAA);
+    SendMsg(playerid, COLOR_YELLOW, "Klik icon app untuk menggunakan. Tekan ESC untuk tutup.");
+}
+
+stock HidePhoneUI(playerid)
+{
+    if (!gPhoneOpen[playerid]) return;
+    gPhoneOpen[playerid] = false;
+    CancelSelectTextDraw(playerid);
+    TextDrawHideForPlayer(playerid, PhoneBg);
+    TextDrawHideForPlayer(playerid, PhoneScreen);
+    TextDrawHideForPlayer(playerid, PhoneNotch);
+    TextDrawHideForPlayer(playerid, PhoneStatusBar);
+    TextDrawHideForPlayer(playerid, PhoneTime);
+    TextDrawHideForPlayer(playerid, PhoneBattery);
+    TextDrawHideForPlayer(playerid, PhoneSignal);
+    TextDrawHideForPlayer(playerid, PhoneHeader);
+    for (new i = 0; i < 6; i++)
+    {
+        TextDrawHideForPlayer(playerid, PhoneAppBg[i]);
+        TextDrawHideForPlayer(playerid, PhoneAppLabel[i]);
+        PlayerTextDrawHide(playerid, PhoneAppIcon[playerid][i]);
+    }
+    TextDrawHideForPlayer(playerid, PhoneDockBg);
+    TextDrawHideForPlayer(playerid, PhoneHomeBtn);
+}
+
+stock ShowKTPCard(playerid)
+{
+    if (gKTPOpen[playerid]) return;
+    gKTPOpen[playerid] = true;
+    KTP_Card[playerid] = CreatePlayerTextDraw(playerid, 200.0, 160.0, "_");
+    PlayerTextDrawUseBox(playerid, KTP_Card[playerid], 1);
+    PlayerTextDrawBoxColor(playerid, KTP_Card[playerid], 0xF5F5F5FF);
+    PlayerTextDrawTextSize(playerid, KTP_Card[playerid], 440.0, 0.0);
+    PlayerTextDrawLetterSize(playerid, KTP_Card[playerid], 0.5, 15.0);
+    PlayerTextDrawSetShadow(playerid, KTP_Card[playerid], 0);
+    KTP_Title[playerid] = CreatePlayerTextDraw(playerid, 200.0, 160.0, "~w~KARTU TANDA PENDUDUK");
+    PlayerTextDrawUseBox(playerid, KTP_Title[playerid], 1);
+    PlayerTextDrawBoxColor(playerid, KTP_Title[playerid], 0xD32F2FFF);
+    PlayerTextDrawTextSize(playerid, KTP_Title[playerid], 440.0, 0.0);
+    PlayerTextDrawLetterSize(playerid, KTP_Title[playerid], 0.18, 1.3);
+    PlayerTextDrawSetShadow(playerid, KTP_Title[playerid], 0);
+    PlayerTextDrawAlignment(playerid, KTP_Title[playerid], 2);
+    KTP_Photo[playerid] = CreatePlayerTextDraw(playerid, 210.0, 185.0, "_");
+    PlayerTextDrawFont(playerid, KTP_Photo[playerid], 5);
+    PlayerTextDrawBackgroundColor(playerid, KTP_Photo[playerid], 0x424242FF);
+    PlayerTextDrawTextSize(playerid, KTP_Photo[playerid], 260.0, 230.0);
+    PlayerTextDrawSetPreviewModel(playerid, KTP_Photo[playerid], PlayerInfo[playerid][pSkin]);
+    PlayerTextDrawSetPreviewRot(playerid, KTP_Photo[playerid], 0.0, 0.0, 0.0, 1.0);
+    new _sf_ktp1[128];
+    format(_sf_ktp1, sizeof(_sf_ktp1), "~b~Nama: ~w~%s", PlayerInfo[playerid][pName]);
+    KTP_Name[playerid] = CreatePlayerTextDraw(playerid, 270.0, 185.0, _sf_ktp1);
+    PlayerTextDrawLetterSize(playerid, KTP_Name[playerid], 0.15, 0.7);
+    PlayerTextDrawSetShadow(playerid, KTP_Name[playerid], 0);
+    new _sf_ktp2[128];
+    format(_sf_ktp2, sizeof(_sf_ktp2), "~b~NIK: ~w~%d%d%d%d", playerid + 1000, PlayerInfo[playerid][pID], PlayerInfo[playerid][pAge], PlayerInfo[playerid][pGender]);
+    KTP_NIK[playerid] = CreatePlayerTextDraw(playerid, 270.0, 198.0, _sf_ktp2);
+    PlayerTextDrawLetterSize(playerid, KTP_NIK[playerid], 0.14, 0.65);
+    PlayerTextDrawSetShadow(playerid, KTP_NIK[playerid], 0);
+    new _sf_ktp3[256];
+    new gender_s[16];
+    if (PlayerInfo[playerid][pGender] == 0) gender_s = "Laki-laki";
+    else gender_s = "Perempuan";
+    format(_sf_ktp3, sizeof(_sf_ktp3), "~b~Umur: ~w~%d  ~b~JK: ~w~%s  ~b~Job: ~w~%s", PlayerInfo[playerid][pAge], gender_s, gJobNames[PlayerInfo[playerid][pJob]]);
+    KTP_Detail[playerid] = CreatePlayerTextDraw(playerid, 270.0, 211.0, _sf_ktp3);
+    PlayerTextDrawLetterSize(playerid, KTP_Detail[playerid], 0.14, 0.65);
+    PlayerTextDrawSetShadow(playerid, KTP_Detail[playerid], 0);
+    PlayerTextDrawShow(playerid, KTP_Card[playerid]);
+    PlayerTextDrawShow(playerid, KTP_Title[playerid]);
+    PlayerTextDrawShow(playerid, KTP_Photo[playerid]);
+    PlayerTextDrawShow(playerid, KTP_Name[playerid]);
+    PlayerTextDrawShow(playerid, KTP_NIK[playerid]);
+    PlayerTextDrawShow(playerid, KTP_Detail[playerid]);
+    SetTimerEx("HideKTPCard", 8000, false, "i", playerid);
+}
+
+forward HideKTPCard(playerid);
+public HideKTPCard(playerid)
+{
+    if (!gKTPOpen[playerid]) return 1;
+    gKTPOpen[playerid] = false;
+    PlayerTextDrawDestroy(playerid, KTP_Card[playerid]);
+    PlayerTextDrawDestroy(playerid, KTP_Title[playerid]);
+    PlayerTextDrawDestroy(playerid, KTP_Photo[playerid]);
+    PlayerTextDrawDestroy(playerid, KTP_Name[playerid]);
+    PlayerTextDrawDestroy(playerid, KTP_NIK[playerid]);
+    PlayerTextDrawDestroy(playerid, KTP_Detail[playerid]);
+    return 1;
+}
+
+stock ShowStatsCard(playerid)
+{
+    if (gStatOpen[playerid]) return;
+    gStatOpen[playerid] = true;
+    STAT_Card[playerid] = CreatePlayerTextDraw(playerid, 180.0, 140.0, "_");
+    PlayerTextDrawUseBox(playerid, STAT_Card[playerid], 1);
+    PlayerTextDrawBoxColor(playerid, STAT_Card[playerid], 0x1E1E1EEE);
+    PlayerTextDrawTextSize(playerid, STAT_Card[playerid], 460.0, 0.0);
+    PlayerTextDrawLetterSize(playerid, STAT_Card[playerid], 0.5, 18.0);
+    PlayerTextDrawSetShadow(playerid, STAT_Card[playerid], 0);
+    new _sf_st[128];
+    format(_sf_st, sizeof(_sf_st), "~w~STATS: %s", PlayerInfo[playerid][pName]);
+    STAT_Title[playerid] = CreatePlayerTextDraw(playerid, 180.0, 140.0, _sf_st);
+    PlayerTextDrawUseBox(playerid, STAT_Title[playerid], 1);
+    PlayerTextDrawBoxColor(playerid, STAT_Title[playerid], 0x00897BFF);
+    PlayerTextDrawTextSize(playerid, STAT_Title[playerid], 460.0, 0.0);
+    PlayerTextDrawLetterSize(playerid, STAT_Title[playerid], 0.16, 1.3);
+    PlayerTextDrawSetShadow(playerid, STAT_Title[playerid], 0);
+    PlayerTextDrawAlignment(playerid, STAT_Title[playerid], 2);
+    new _sf_s1[256];
+    format(_sf_s1, sizeof(_sf_s1), "~g~Lvl %d  ~w~Exp: %d  ~b~Job: %s", PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp], gJobNames[PlayerInfo[playerid][pJob]]);
+    STAT_Line1[playerid] = CreatePlayerTextDraw(playerid, 190.0, 170.0, _sf_s1);
+    PlayerTextDrawLetterSize(playerid, STAT_Line1[playerid], 0.15, 0.7);
+    PlayerTextDrawSetShadow(playerid, STAT_Line1[playerid], 0);
+    new _sf_s2[256];
+    format(_sf_s2, sizeof(_sf_s2), "~g~Cash: $%d  ~b~Bank: $%d", PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank]);
+    STAT_Line2[playerid] = CreatePlayerTextDraw(playerid, 190.0, 185.0, _sf_s2);
+    PlayerTextDrawLetterSize(playerid, STAT_Line2[playerid], 0.15, 0.7);
+    PlayerTextDrawSetShadow(playerid, STAT_Line2[playerid], 0);
+    new _sf_s3[256];
+    format(_sf_s3, sizeof(_sf_s3), "~r~HP: %.0f  ~b~AR: %.0f  ~o~Hunger: %.0f  ~c~Thirst: %.0f", PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor], PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst]);
+    STAT_Line3[playerid] = CreatePlayerTextDraw(playerid, 190.0, 200.0, _sf_s3);
+    PlayerTextDrawLetterSize(playerid, STAT_Line3[playerid], 0.13, 0.6);
+    PlayerTextDrawSetShadow(playerid, STAT_Line3[playerid], 0);
+    new _sf_s4[256];
+    new sick_s[16];
+    if (PlayerInfo[playerid][pSickness] == 0) sick_s = "Sehat";
+    else if (PlayerInfo[playerid][pSickness] == 1) sick_s = "Flu";
+    else if (PlayerInfo[playerid][pSickness] == 2) sick_s = "Demam";
+    else sick_s = "Infeksi";
+    format(_sf_s4, sizeof(_sf_s4), "~p~Sleep: %.0f  ~g~Stamina: %.0f  ~r~Sakit: %s", PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina], sick_s);
+    STAT_Line4[playerid] = CreatePlayerTextDraw(playerid, 190.0, 213.0, _sf_s4);
+    PlayerTextDrawLetterSize(playerid, STAT_Line4[playerid], 0.13, 0.6);
+    PlayerTextDrawSetShadow(playerid, STAT_Line4[playerid], 0);
+    new _sf_s5[256];
+    new ktp_s[8];
+    if (PlayerInfo[playerid][pKTP]) ktp_s = "Ada";
+    else ktp_s = "Tdk";
+    format(_sf_s5, sizeof(_sf_s5), "~w~HP: %d ($%d)  KTP: %s  Skin: %d  Wanted: %d", PlayerInfo[playerid][pPhone], PlayerInfo[playerid][pPhoneCredit], ktp_s, PlayerInfo[playerid][pSkin], PlayerInfo[playerid][pWanted]);
+    STAT_Line5[playerid] = CreatePlayerTextDraw(playerid, 190.0, 226.0, _sf_s5);
+    PlayerTextDrawLetterSize(playerid, STAT_Line5[playerid], 0.13, 0.6);
+    PlayerTextDrawSetShadow(playerid, STAT_Line5[playerid], 0);
+    PlayerTextDrawShow(playerid, STAT_Card[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Title[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Line1[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Line2[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Line3[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Line4[playerid]);
+    PlayerTextDrawShow(playerid, STAT_Line5[playerid]);
+    SetTimerEx("HideStatsCard", 8000, false, "i", playerid);
+}
+
+forward HideStatsCard(playerid);
+public HideStatsCard(playerid)
+{
+    if (!gStatOpen[playerid]) return 1;
+    gStatOpen[playerid] = false;
+    PlayerTextDrawDestroy(playerid, STAT_Card[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Title[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Line1[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Line2[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Line3[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Line4[playerid]);
+    PlayerTextDrawDestroy(playerid, STAT_Line5[playerid]);
+    return 1;
+}
+
+public OnPlayerClickTextDraw(playerid, Text:clickedid)
+{
+    if (gPhoneOpen[playerid])
+    {
+        if (clickedid == PhoneHomeBtn || clickedid == Text:INVALID_TEXT_DRAW)
+        {
+            HidePhoneUI(playerid);
+            return 1;
+        }
+        for (new i = 0; i < 6; i++)
+        {
+            if (clickedid == PhoneAppBg[i])
+            {
+                HidePhoneUI(playerid);
+                switch (i)
+                {
+                    case 0: cmd_bank(playerid, "");
+                    case 1: SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /sms [nomor] [pesan]");
+                    case 2: SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /call [nomor]");
+                    case 3: cmd_gps(playerid, "");
+                    case 4: SendMsg(playerid, COLOR_YELLOW, "Masuk ke toko dan gunakan /beli");
+                    case 5: cmd_dokumen(playerid, "");
+                }
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+/* =====================================================================
  *  MAIN MENU & FULL COMMAND LIST
  * =====================================================================*/
 CMD:menu(playerid, params[])
@@ -3508,497 +3887,6 @@ CMD:commands(playerid, params[])
 
 
 
-/* =====================================================================
- *  MODERN SMARTPHONE TEXTDRAW SYSTEM
- * =====================================================================*/
-
-/* Phone TextDraws (global) */
-new Text:PhoneBg;           /* Phone outer background (black bezel) */
-new Text:PhoneScreen;       /* Phone screen (teal background) */
-new Text:PhoneStatusBar;    /* Top status bar */
-new Text:PhoneTime;         /* Clock on phone */
-new Text:PhoneAppBank;      /* Bank app icon */
-new Text:PhoneAppSMS;       /* SMS app icon */
-new Text:PhoneAppCall;      /* Call app icon */
-new Text:PhoneAppGPS;       /* GPS app icon */
-new Text:PhoneAppSettings;  /* Settings app icon */
-new Text:PhoneAppShop;      /* Shop app icon */
-new Text:PhoneAppDocs;      /* Documents app icon */
-new Text:PhoneLabelBank;
-new Text:PhoneLabelSMS;
-new Text:PhoneLabelCall;
-new Text:PhoneLabelGPS;
-new Text:PhoneLabelSettings;
-new Text:PhoneLabelShop;
-new Text:PhoneLabelDocs;
-new Text:PhoneDockBg;       /* Dock background */
-new Text:PhoneHomeBtn;      /* Home button */
-new Text:PhoneHeader;       /* "INFERNO PHONE" header */
-
-/* Per-player phone data */
-new bool:gPhoneOpen[MAX_PLAYERS];
-
-/* KTP Card TextDraws (per-player) */
-new PlayerText:KTP_Card[MAX_PLAYERS];
-new PlayerText:KTP_Title[MAX_PLAYERS];
-new PlayerText:KTP_Name[MAX_PLAYERS];
-new PlayerText:KTP_NIK[MAX_PLAYERS];
-new PlayerText:KTP_Detail[MAX_PLAYERS];
-new PlayerText:KTP_Photo[MAX_PLAYERS];
-new bool:gKTPOpen[MAX_PLAYERS];
-
-/* Stats Card TextDraws (per-player) */
-new PlayerText:STAT_Card[MAX_PLAYERS];
-new PlayerText:STAT_Title[MAX_PLAYERS];
-new PlayerText:STAT_Line1[MAX_PLAYERS];
-new PlayerText:STAT_Line2[MAX_PLAYERS];
-new PlayerText:STAT_Line3[MAX_PLAYERS];
-new PlayerText:STAT_Line4[MAX_PLAYERS];
-new PlayerText:STAT_Line5[MAX_PLAYERS];
-new bool:gStatOpen[MAX_PLAYERS];
-
-stock CreatePhoneTextDraws()
-{
-    /* Phone outer bezel - black rounded box */
-    PhoneBg = TextDrawCreate(250.0, 140.0, "_");
-    TextDrawUseBox(PhoneBg, 1);
-    TextDrawBoxColor(PhoneBg, 0x000000FF);
-    TextDrawTextSize(PhoneBg, 390.0, 0.0);
-    TextDrawLetterSize(PhoneBg, 0.5, 22.0);
-    TextDrawSetShadow(PhoneBg, 0);
-
-    /* Phone screen - teal background */
-    PhoneScreen = TextDrawCreate(255.0, 145.0, "_");
-    TextDrawUseBox(PhoneScreen, 1);
-    TextDrawBoxColor(PhoneScreen, 0x00897BFF);
-    TextDrawTextSize(PhoneScreen, 385.0, 0.0);
-    TextDrawLetterSize(PhoneScreen, 0.5, 21.0);
-    TextDrawSetShadow(PhoneScreen, 0);
-
-    /* Status bar - darker teal */
-    PhoneStatusBar = TextDrawCreate(255.0, 145.0, "_");
-    TextDrawUseBox(PhoneStatusBar, 1);
-    TextDrawBoxColor(PhoneStatusBar, 0x00695CFF);
-    TextDrawTextSize(PhoneStatusBar, 385.0, 0.0);
-    TextDrawLetterSize(PhoneStatusBar, 0.5, 1.2);
-    TextDrawSetShadow(PhoneStatusBar, 0);
-
-    /* Clock on phone */
-    PhoneTime = TextDrawCreate(260.0, 147.0, "00:00");
-    TextDrawLetterSize(PhoneTime, 0.18, 0.8);
-    TextDrawColor(PhoneTime, 0xFFFFFFFF);
-    TextDrawSetShadow(PhoneTime, 0);
-
-    /* Header text */
-    PhoneHeader = TextDrawCreate(320.0, 160.0, "~w~INFERNO ~b~~h~Phone");
-    TextDrawLetterSize(PhoneHeader, 0.20, 0.9);
-    TextDrawSetShadow(PhoneHeader, 0);
-    TextDrawAlignment(PhoneHeader, 2);
-
-    /* App icons - row 1 (Y=180) */
-    /* Bank app - blue box */
-    PhoneAppBank = TextDrawCreate(265.0, 180.0, "_");
-    TextDrawUseBox(PhoneAppBank, 1);
-    TextDrawBoxColor(PhoneAppBank, 0x2196F3FF);
-    TextDrawTextSize(PhoneAppBank, 295.0, 0.0);
-    TextDrawLetterSize(PhoneAppBank, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppBank, 0);
-
-    PhoneLabelBank = TextDrawCreate(280.0, 200.0, "~w~Bank");
-    TextDrawLetterSize(PhoneLabelBank, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelBank, 0);
-    TextDrawAlignment(PhoneLabelBank, 2);
-
-    /* SMS app - green box */
-    PhoneAppSMS = TextDrawCreate(305.0, 180.0, "_");
-    TextDrawUseBox(PhoneAppSMS, 1);
-    TextDrawBoxColor(PhoneAppSMS, 0x4CAF50FF);
-    TextDrawTextSize(PhoneAppSMS, 335.0, 0.0);
-    TextDrawLetterSize(PhoneAppSMS, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppSMS, 0);
-
-    PhoneLabelSMS = TextDrawCreate(320.0, 200.0, "~w~SMS");
-    TextDrawLetterSize(PhoneLabelSMS, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelSMS, 0);
-    TextDrawAlignment(PhoneLabelSMS, 2);
-
-    /* Call app - green box */
-    PhoneAppCall = TextDrawCreate(345.0, 180.0, "_");
-    TextDrawUseBox(PhoneAppCall, 1);
-    TextDrawBoxColor(PhoneAppCall, 0x00C853FF);
-    TextDrawTextSize(PhoneAppCall, 375.0, 0.0);
-    TextDrawLetterSize(PhoneAppCall, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppCall, 0);
-
-    PhoneLabelCall = TextDrawCreate(360.0, 200.0, "~w~Call");
-    TextDrawLetterSize(PhoneLabelCall, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelCall, 0);
-    TextDrawAlignment(PhoneLabelCall, 2);
-
-    /* App icons - row 2 (Y=220) */
-    /* GPS app - red box */
-    PhoneAppGPS = TextDrawCreate(265.0, 220.0, "_");
-    TextDrawUseBox(PhoneAppGPS, 1);
-    TextDrawBoxColor(PhoneAppGPS, 0xF44336FF);
-    TextDrawTextSize(PhoneAppGPS, 295.0, 0.0);
-    TextDrawLetterSize(PhoneAppGPS, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppGPS, 0);
-
-    PhoneLabelGPS = TextDrawCreate(280.0, 240.0, "~w~GPS");
-    TextDrawLetterSize(PhoneLabelGPS, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelGPS, 0);
-    TextDrawAlignment(PhoneLabelGPS, 2);
-
-    /* Shop app - orange box */
-    PhoneAppShop = TextDrawCreate(305.0, 220.0, "_");
-    TextDrawUseBox(PhoneAppShop, 1);
-    TextDrawBoxColor(PhoneAppShop, 0xFF9800FF);
-    TextDrawTextSize(PhoneAppShop, 335.0, 0.0);
-    TextDrawLetterSize(PhoneAppShop, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppShop, 0);
-
-    PhoneLabelShop = TextDrawCreate(320.0, 240.0, "~w~Toko");
-    TextDrawLetterSize(PhoneLabelShop, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelShop, 0);
-    TextDrawAlignment(PhoneLabelShop, 2);
-
-    /* Docs app - purple box */
-    PhoneAppDocs = TextDrawCreate(345.0, 220.0, "_");
-    TextDrawUseBox(PhoneAppDocs, 1);
-    TextDrawBoxColor(PhoneAppDocs, 0x9C27B0FF);
-    TextDrawTextSize(PhoneAppDocs, 375.0, 0.0);
-    TextDrawLetterSize(PhoneAppDocs, 0.5, 2.5);
-    TextDrawSetShadow(PhoneAppDocs, 0);
-
-    PhoneLabelDocs = TextDrawCreate(360.0, 240.0, "~w~Dokumen");
-    TextDrawLetterSize(PhoneLabelDocs, 0.12, 0.55);
-    TextDrawSetShadow(PhoneLabelDocs, 0);
-    TextDrawAlignment(PhoneLabelDocs, 2);
-
-    /* Dock background - darker teal */
-    PhoneDockBg = TextDrawCreate(255.0, 310.0, "_");
-    TextDrawUseBox(PhoneDockBg, 1);
-    TextDrawBoxColor(PhoneDockBg, 0x004D40FF);
-    TextDrawTextSize(PhoneDockBg, 385.0, 0.0);
-    TextDrawLetterSize(PhoneDockBg, 0.5, 2.5);
-    TextDrawSetShadow(PhoneDockBg, 0);
-
-    /* Home button - circle at bottom */
-    PhoneHomeBtn = TextDrawCreate(310.0, 325.0, "_");
-    TextDrawUseBox(PhoneHomeBtn, 1);
-    TextDrawBoxColor(PhoneHomeBtn, 0xB0BEC5FF);
-    TextDrawTextSize(PhoneHomeBtn, 330.0, 0.0);
-    TextDrawLetterSize(PhoneHomeBtn, 0.5, 1.0);
-    TextDrawSetShadow(PhoneHomeBtn, 0);
-
-    print("[InfernoRP] Modern Phone TextDraws created.");
-}
-
-stock ShowPhoneUI(playerid)
-{
-    if (gPhoneOpen[playerid]) return;
-    gPhoneOpen[playerid] = true;
-
-    /* Update phone clock */
-    new hour, minute;
-    new tstr[16];
-    gettime(hour, minute);
-    format(tstr, sizeof(tstr), "%02d:%02d", hour, minute);
-    TextDrawSetString(PhoneTime, tstr);
-
-    TextDrawShowForPlayer(playerid, PhoneBg);
-    TextDrawShowForPlayer(playerid, PhoneScreen);
-    TextDrawShowForPlayer(playerid, PhoneStatusBar);
-    TextDrawShowForPlayer(playerid, PhoneTime);
-    TextDrawShowForPlayer(playerid, PhoneHeader);
-    TextDrawShowForPlayer(playerid, PhoneAppBank);
-    TextDrawShowForPlayer(playerid, PhoneAppSMS);
-    TextDrawShowForPlayer(playerid, PhoneAppCall);
-    TextDrawShowForPlayer(playerid, PhoneAppGPS);
-    TextDrawShowForPlayer(playerid, PhoneAppShop);
-    TextDrawShowForPlayer(playerid, PhoneAppDocs);
-    TextDrawShowForPlayer(playerid, PhoneLabelBank);
-    TextDrawShowForPlayer(playerid, PhoneLabelSMS);
-    TextDrawShowForPlayer(playerid, PhoneLabelCall);
-    TextDrawShowForPlayer(playerid, PhoneLabelGPS);
-    TextDrawShowForPlayer(playerid, PhoneLabelShop);
-    TextDrawShowForPlayer(playerid, PhoneLabelDocs);
-    TextDrawShowForPlayer(playerid, PhoneDockBg);
-    TextDrawShowForPlayer(playerid, PhoneHomeBtn);
-
-    SelectTextDraw(playerid, 0x00897BAA);
-    SendMsg(playerid, COLOR_YELLOW, "Klik app untuk menggunakan. Tekan ESC atau klik tombol home untuk tutup.");
-}
-
-stock HidePhoneUI(playerid)
-{
-    if (!gPhoneOpen[playerid]) return;
-    gPhoneOpen[playerid] = false;
-    CancelSelectTextDraw(playerid);
-
-    TextDrawHideForPlayer(playerid, PhoneBg);
-    TextDrawHideForPlayer(playerid, PhoneScreen);
-    TextDrawHideForPlayer(playerid, PhoneStatusBar);
-    TextDrawHideForPlayer(playerid, PhoneTime);
-    TextDrawHideForPlayer(playerid, PhoneHeader);
-    TextDrawHideForPlayer(playerid, PhoneAppBank);
-    TextDrawHideForPlayer(playerid, PhoneAppSMS);
-    TextDrawHideForPlayer(playerid, PhoneAppCall);
-    TextDrawHideForPlayer(playerid, PhoneAppGPS);
-    TextDrawHideForPlayer(playerid, PhoneAppShop);
-    TextDrawHideForPlayer(playerid, PhoneAppDocs);
-    TextDrawHideForPlayer(playerid, PhoneLabelBank);
-    TextDrawHideForPlayer(playerid, PhoneLabelSMS);
-    TextDrawHideForPlayer(playerid, PhoneLabelCall);
-    TextDrawHideForPlayer(playerid, PhoneLabelGPS);
-    TextDrawHideForPlayer(playerid, PhoneLabelShop);
-    TextDrawHideForPlayer(playerid, PhoneLabelDocs);
-    TextDrawHideForPlayer(playerid, PhoneDockBg);
-    TextDrawHideForPlayer(playerid, PhoneHomeBtn);
-}
-
-/* =====================================================================
- *  MODERN KTP CARD (TextDraw)
- * =====================================================================*/
-stock ShowKTPCard(playerid)
-{
-    if (gKTPOpen[playerid]) return;
-    gKTPOpen[playerid] = true;
-
-    /* Card background - white */
-    KTP_Card[playerid] = CreatePlayerTextDraw(playerid, 200.0, 160.0, "_");
-    PlayerTextDrawUseBox(playerid, KTP_Card[playerid], 1);
-    PlayerTextDrawBoxColor(playerid, KTP_Card[playerid], 0xF5F5F5FF);
-    PlayerTextDrawTextSize(playerid, KTP_Card[playerid], 440.0, 0.0);
-    PlayerTextDrawLetterSize(playerid, KTP_Card[playerid], 0.5, 15.0);
-    PlayerTextDrawSetShadow(playerid, KTP_Card[playerid], 0);
-
-    /* Title bar - red */
-    KTP_Title[playerid] = CreatePlayerTextDraw(playerid, 200.0, 160.0, "_");
-    PlayerTextDrawUseBox(playerid, KTP_Title[playerid], 1);
-    PlayerTextDrawBoxColor(playerid, KTP_Title[playerid], 0xD32F2FFF);
-    PlayerTextDrawTextSize(playerid, KTP_Title[playerid], 440.0, 0.0);
-    PlayerTextDrawLetterSize(playerid, KTP_Title[playerid], 0.5, 1.5);
-    PlayerTextDrawSetShadow(playerid, KTP_Title[playerid], 0);
-
-    /* Photo box - gray */
-    KTP_Photo[playerid] = CreatePlayerTextDraw(playerid, 210.0, 185.0, "_");
-    PlayerTextDrawUseBox(playerid, KTP_Photo[playerid], 1);
-    PlayerTextDrawBoxColor(playerid, KTP_Photo[playerid], 0x424242FF);
-    PlayerTextDrawTextSize(playerid, KTP_Photo[playerid], 260.0, 0.0);
-    PlayerTextDrawLetterSize(playerid, KTP_Photo[playerid], 0.5, 5.0);
-    PlayerTextDrawSetShadow(playerid, KTP_Photo[playerid], 0);
-
-    /* Name line */
-    new nmstr[128];
-    new _sf_ktp1[128];
-    format(_sf_ktp1, sizeof(_sf_ktp1), "~b~Nama: ~w~%s", PlayerInfo[playerid][pName]);
-    strcat(nmstr, _sf_ktp1, sizeof(nmstr));
-    KTP_Name[playerid] = CreatePlayerTextDraw(playerid, 270.0, 185.0, nmstr);
-    PlayerTextDrawLetterSize(playerid, KTP_Name[playerid], 0.15, 0.7);
-    PlayerTextDrawSetShadow(playerid, KTP_Name[playerid], 0);
-
-    /* NIK + details */
-    new dtstr[256];
-    new _sf_ktp2[256];
-    new _sf_ktp3[128];
-    new _sf_ktp4[128];
-    new _sf_ktp5[128];
-    new gender_s[16];
-    if (PlayerInfo[playerid][pGender] == 0) gender_s = "Laki-laki";
-    else gender_s = "Perempuan";
-    format(_sf_ktp2, sizeof(_sf_ktp2), "~b~NIK: ~w~%d%d%d%d%d", playerid + 1000, PlayerInfo[playerid][pID], PlayerInfo[playerid][pAge], PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pGender]);
-    format(_sf_ktp3, sizeof(_sf_ktp3), "~b~Umur: ~w~%d   ~b~JK: ~w~%s", PlayerInfo[playerid][pAge], gender_s);
-    format(_sf_ktp4, sizeof(_sf_ktp4), "~b~Level: ~w~%d   ~b~Job: ~w~%s", PlayerInfo[playerid][pLevel], gJobNames[PlayerInfo[playerid][pJob]]);
-    format(_sf_ktp5, sizeof(_sf_ktp5), "~b~Skin: ~w~%d   ~b~Phone: ~w~%d", PlayerInfo[playerid][pSkin], PlayerInfo[playerid][pPhone]);
-    strcat(dtstr, _sf_ktp2, sizeof(dtstr));
-    strcat(dtstr, "\n", sizeof(dtstr));
-    strcat(dtstr, _sf_ktp3, sizeof(dtstr));
-    strcat(dtstr, "\n", sizeof(dtstr));
-    strcat(dtstr, _sf_ktp4, sizeof(dtstr));
-    strcat(dtstr, "\n", sizeof(dtstr));
-    strcat(dtstr, _sf_ktp5, sizeof(dtstr));
-
-    KTP_NIK[playerid] = CreatePlayerTextDraw(playerid, 270.0, 198.0, _sf_ktp2);
-    PlayerTextDrawLetterSize(playerid, KTP_NIK[playerid], 0.14, 0.65);
-    PlayerTextDrawSetShadow(playerid, KTP_NIK[playerid], 0);
-
-    KTP_Detail[playerid] = CreatePlayerTextDraw(playerid, 270.0, 210.0, _sf_ktp3);
-    PlayerTextDrawLetterSize(playerid, KTP_Detail[playerid], 0.14, 0.65);
-    PlayerTextDrawSetShadow(playerid, KTP_Detail[playerid], 0);
-
-    PlayerTextDrawShow(playerid, KTP_Card[playerid]);
-    PlayerTextDrawShow(playerid, KTP_Title[playerid]);
-    PlayerTextDrawShow(playerid, KTP_Photo[playerid]);
-    PlayerTextDrawShow(playerid, KTP_Name[playerid]);
-    PlayerTextDrawShow(playerid, KTP_NIK[playerid]);
-    PlayerTextDrawShow(playerid, KTP_Detail[playerid]);
-
-    SetTimerEx("HideKTPCard", 8000, false, "i", playerid);
-    SendMsg(playerid, COLOR_YELLOW, "KTP ditampilkan selama 8 detik.");
-}
-
-forward HideKTPCard(playerid);
-public HideKTPCard(playerid)
-{
-    if (!gKTPOpen[playerid]) return 1;
-    gKTPOpen[playerid] = false;
-    PlayerTextDrawHide(playerid, KTP_Card[playerid]);
-    PlayerTextDrawHide(playerid, KTP_Title[playerid]);
-    PlayerTextDrawHide(playerid, KTP_Photo[playerid]);
-    PlayerTextDrawHide(playerid, KTP_Name[playerid]);
-    PlayerTextDrawHide(playerid, KTP_NIK[playerid]);
-    PlayerTextDrawHide(playerid, KTP_Detail[playerid]);
-    return 1;
-}
-
-/* =====================================================================
- *  MODERN STATS CARD (TextDraw)
- * =====================================================================*/
-stock ShowStatsCard(playerid)
-{
-    if (gStatOpen[playerid]) return;
-    gStatOpen[playerid] = true;
-
-    /* Card background */
-    STAT_Card[playerid] = CreatePlayerTextDraw(playerid, 180.0, 140.0, "_");
-    PlayerTextDrawUseBox(playerid, STAT_Card[playerid], 1);
-    PlayerTextDrawBoxColor(playerid, STAT_Card[playerid], 0x1E1E1EEE);
-    PlayerTextDrawTextSize(playerid, STAT_Card[playerid], 460.0, 0.0);
-    PlayerTextDrawLetterSize(playerid, STAT_Card[playerid], 0.5, 18.0);
-    PlayerTextDrawSetShadow(playerid, STAT_Card[playerid], 0);
-
-    /* Title bar */
-    STAT_Title[playerid] = CreatePlayerTextDraw(playerid, 180.0, 140.0, "_");
-    PlayerTextDrawUseBox(playerid, STAT_Title[playerid], 1);
-    PlayerTextDrawBoxColor(playerid, STAT_Title[playerid], 0x00897BFF);
-    PlayerTextDrawTextSize(playerid, STAT_Title[playerid], 460.0, 0.0);
-    PlayerTextDrawLetterSize(playerid, STAT_Title[playerid], 0.5, 1.5);
-    PlayerTextDrawSetShadow(playerid, STAT_Title[playerid], 0);
-
-    /* Line 1: Name + Level */
-    new _sf_s1[256];
-    format(_sf_s1, sizeof(_sf_s1), "~w~%s   ~g~Lvl %d (Exp:%d)", PlayerInfo[playerid][pName], PlayerInfo[playerid][pLevel], PlayerInfo[playerid][pExp]);
-    STAT_Line1[playerid] = CreatePlayerTextDraw(playerid, 190.0, 170.0, _sf_s1);
-    PlayerTextDrawLetterSize(playerid, STAT_Line1[playerid], 0.16, 0.75);
-    PlayerTextDrawSetShadow(playerid, STAT_Line1[playerid], 0);
-
-    /* Line 2: Cash + Bank */
-    new _sf_s2[256];
-    format(_sf_s2, sizeof(_sf_s2), "~g~Cash: $%d   ~b~Bank: $%d", PlayerInfo[playerid][pCash], PlayerInfo[playerid][pBank]);
-    STAT_Line2[playerid] = CreatePlayerTextDraw(playerid, 190.0, 185.0, _sf_s2);
-    PlayerTextDrawLetterSize(playerid, STAT_Line2[playerid], 0.16, 0.75);
-    PlayerTextDrawSetShadow(playerid, STAT_Line2[playerid], 0);
-
-    /* Line 3: Survival stats */
-    new _sf_s3[256];
-    format(_sf_s3, sizeof(_sf_s3), "~r~HP: %.0f  ~b~AR: %.0f  ~o~Hunger: %.0f  ~c~Thirst: %.0f", PlayerInfo[playerid][pHealth], PlayerInfo[playerid][pArmor], PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst]);
-    STAT_Line3[playerid] = CreatePlayerTextDraw(playerid, 190.0, 200.0, _sf_s3);
-    PlayerTextDrawLetterSize(playerid, STAT_Line3[playerid], 0.14, 0.65);
-    PlayerTextDrawSetShadow(playerid, STAT_Line3[playerid], 0);
-
-    /* Line 4: Sleep + Stamina + Sickness */
-    new _sf_s4[256];
-    new sick_s[16];
-    if (PlayerInfo[playerid][pSickness] == 0) sick_s = "Sehat";
-    else if (PlayerInfo[playerid][pSickness] == 1) sick_s = "Flu";
-    else if (PlayerInfo[playerid][pSickness] == 2) sick_s = "Demam";
-    else sick_s = "Infeksi";
-    format(_sf_s4, sizeof(_sf_s4), "~p~Sleep: %.0f  ~g~Stamina: %.0f  ~r~Sakit: %s", PlayerInfo[playerid][pSleep], PlayerInfo[playerid][pStamina], sick_s);
-    STAT_Line4[playerid] = CreatePlayerTextDraw(playerid, 190.0, 213.0, _sf_s4);
-    PlayerTextDrawLetterSize(playerid, STAT_Line4[playerid], 0.14, 0.65);
-    PlayerTextDrawSetShadow(playerid, STAT_Line4[playerid], 0);
-
-    /* Line 5: Job + Phone + Docs */
-    new _sf_s5[256];
-    new ktp_s[8];
-    if (PlayerInfo[playerid][pKTP]) ktp_s = "Ada";
-    else ktp_s = "Tdk";
-    format(_sf_s5, sizeof(_sf_s5), "~w~Job: %s  HP: %d  KTP: %s  Skin: %d", gJobNames[PlayerInfo[playerid][pJob]], PlayerInfo[playerid][pPhone], ktp_s, PlayerInfo[playerid][pSkin]);
-    STAT_Line5[playerid] = CreatePlayerTextDraw(playerid, 190.0, 226.0, _sf_s5);
-    PlayerTextDrawLetterSize(playerid, STAT_Line5[playerid], 0.14, 0.65);
-    PlayerTextDrawSetShadow(playerid, STAT_Line5[playerid], 0);
-
-    PlayerTextDrawShow(playerid, STAT_Card[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Title[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Line1[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Line2[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Line3[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Line4[playerid]);
-    PlayerTextDrawShow(playerid, STAT_Line5[playerid]);
-
-    SetTimerEx("HideStatsCard", 8000, false, "i", playerid);
-}
-
-forward HideStatsCard(playerid);
-public HideStatsCard(playerid)
-{
-    if (!gStatOpen[playerid]) return 1;
-    gStatOpen[playerid] = false;
-    PlayerTextDrawHide(playerid, STAT_Card[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Title[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Line1[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Line2[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Line3[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Line4[playerid]);
-    PlayerTextDrawHide(playerid, STAT_Line5[playerid]);
-    return 1;
-}
-
-/* =====================================================================
- *  OnPlayerClickTextDraw - Phone app clicks
- * =====================================================================*/
-public OnPlayerClickTextDraw(playerid, Text:clickedid)
-{
-    if (gPhoneOpen[playerid])
-    {
-        if (clickedid == PhoneHomeBtn || clickedid == Text:INVALID_TEXT_DRAW)
-        {
-            HidePhoneUI(playerid);
-            return 1;
-        }
-        if (clickedid == PhoneAppBank)
-        {
-            HidePhoneUI(playerid);
-            cmd_bank(playerid, "");
-            return 1;
-        }
-        if (clickedid == PhoneAppSMS)
-        {
-            HidePhoneUI(playerid);
-            SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /sms [nomor] [pesan]");
-            return 1;
-        }
-        if (clickedid == PhoneAppCall)
-        {
-            HidePhoneUI(playerid);
-            SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /call [nomor]");
-            return 1;
-        }
-        if (clickedid == PhoneAppGPS)
-        {
-            HidePhoneUI(playerid);
-            cmd_gps(playerid, "");
-            return 1;
-        }
-        if (clickedid == PhoneAppShop)
-        {
-            HidePhoneUI(playerid);
-            SendMsg(playerid, COLOR_YELLOW, "Masuk ke toko dan gunakan /beli");
-            return 1;
-        }
-        if (clickedid == PhoneAppDocs)
-        {
-            HidePhoneUI(playerid);
-            cmd_dokumen(playerid, "");
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-/* =====================================================================
  *  ADMIN COMMANDS
  * =====================================================================*/
 
