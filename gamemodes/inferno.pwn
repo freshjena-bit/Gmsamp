@@ -3453,7 +3453,7 @@ CMD:tppos(playerid, params[])
 }
 
 /* =====================================================================
- *  MODERN SMARTPHONE TEXTDRAW SYSTEM (with 3D Model Icons)
+ *  MODERN SMARTPHONE TEXTDRAW SYSTEM (Clean UI - No 3D models)
  * =====================================================================*/
 
 new Text:PhoneBg;
@@ -3467,8 +3467,8 @@ new Text:PhoneHeader;
 new Text:PhoneDockBg;
 new Text:PhoneHomeBtn;
 new Text:PhoneAppBg[6];
+new Text:PhoneAppIcon[6];
 new Text:PhoneAppLabel[6];
-new PlayerText:PhoneAppIcon[MAX_PLAYERS][6];
 new bool:gPhoneOpen[MAX_PLAYERS];
 
 new PlayerText:KTP_Card[MAX_PLAYERS];
@@ -3488,19 +3488,35 @@ new PlayerText:STAT_Line4[MAX_PLAYERS];
 new PlayerText:STAT_Line5[MAX_PLAYERS];
 new bool:gStatOpen[MAX_PLAYERS];
 
-#define ICON_BANK     1274
-#define ICON_SMS      330
-#define ICON_CALL     330
-#define ICON_GPS      411
-#define ICON_SHOP     2653
-#define ICON_DOCS     1582
+/* App positions: 3 cols x 2 rows */
+new Float:gAppPosX[6] = {268.0, 308.0, 348.0, 268.0, 308.0, 348.0};
+new Float:gAppPosY[6] = {180.0, 180.0, 180.0, 230.0, 230.0, 230.0};
 
-new Float:gAppPosX[6] = {265.0, 305.0, 345.0, 265.0, 305.0, 345.0};
-new Float:gAppPosY[6] = {180.0, 180.0, 180.0, 235.0, 235.0, 235.0};
-new gAppModels[6] = {ICON_BANK, ICON_SMS, ICON_CALL, ICON_GPS, ICON_SHOP, ICON_DOCS};
+/* App colors */
+new gAppColors[6] = {
+    0x2196F3FF, /* Bank - blue */
+    0x4CAF50FF, /* SMS - green */
+    0x00C853FF, /* Call - bright green */
+    0xF44336FF, /* GPS - red */
+    0xFF9800FF, /* Toko - orange */
+    0x9C27B0FF /* Dokumen - purple */
+};
+
+/* App icon text (emoji-like using SA-MP text symbols) */
+new gAppIconText[6][16] = {
+    "$",    /* Bank - dollar sign */
+    ">>",   /* SMS - arrow (message) */
+    "()",   /* Call - phone */
+    "<>",   /* GPS - location */
+    "[]",   /* Toko - shop */
+    "##"    /* Dokumen - document */
+};
+
+new gAppNames[6][12] = {"Bank", "SMS", "Telepon", "GPS", "Toko", "Dokumen"};
 
 stock CreatePhoneTextDraws()
 {
+    /* Phone bezel - black */
     PhoneBg = TextDrawCreate(255.0, 130.0, "_");
     TextDrawUseBox(PhoneBg, 1);
     TextDrawBoxColor(PhoneBg, 0x000000FF);
@@ -3508,101 +3524,107 @@ stock CreatePhoneTextDraws()
     TextDrawLetterSize(PhoneBg, 0.5, 25.0);
     TextDrawSetShadow(PhoneBg, 0);
 
+    /* Phone screen - teal */
     PhoneScreen = TextDrawCreate(260.0, 135.0, "_");
     TextDrawUseBox(PhoneScreen, 1);
-    TextDrawBoxColor(PhoneScreen, 0x004D40DD);
+    TextDrawBoxColor(PhoneScreen, 0x00897BFF);
     TextDrawTextSize(PhoneScreen, 380.0, 0.0);
     TextDrawLetterSize(PhoneScreen, 0.5, 24.0);
     TextDrawSetShadow(PhoneScreen, 0);
 
+    /* Notch */
     PhoneNotch = TextDrawCreate(305.0, 135.0, "_");
     TextDrawUseBox(PhoneNotch, 1);
     TextDrawBoxColor(PhoneNotch, 0x000000FF);
     TextDrawTextSize(PhoneNotch, 335.0, 0.0);
-    TextDrawLetterSize(PhoneNotch, 0.5, 0.6);
+    TextDrawLetterSize(PhoneNotch, 0.5, 0.5);
     TextDrawSetShadow(PhoneNotch, 0);
 
-    PhoneStatusBar = TextDrawCreate(260.0, 142.0, "_");
+    /* Status bar */
+    PhoneStatusBar = TextDrawCreate(260.0, 141.0, "_");
     TextDrawUseBox(PhoneStatusBar, 1);
     TextDrawBoxColor(PhoneStatusBar, 0x00695CFF);
     TextDrawTextSize(PhoneStatusBar, 380.0, 0.0);
     TextDrawLetterSize(PhoneStatusBar, 0.5, 0.8);
     TextDrawSetShadow(PhoneStatusBar, 0);
 
-    PhoneTime = TextDrawCreate(265.0, 143.0, "00:00");
+    /* Clock */
+    PhoneTime = TextDrawCreate(265.0, 142.0, "00:00");
     TextDrawLetterSize(PhoneTime, 0.16, 0.65);
     TextDrawColor(PhoneTime, 0xFFFFFFFF);
     TextDrawSetShadow(PhoneTime, 0);
 
-    PhoneBattery = TextDrawCreate(365.0, 144.0, "_");
+    /* Battery */
+    PhoneBattery = TextDrawCreate(368.0, 143.0, "_");
     TextDrawUseBox(PhoneBattery, 1);
     TextDrawBoxColor(PhoneBattery, 0x4CAF50FF);
-    TextDrawTextSize(PhoneBattery, 375.0, 0.0);
-    TextDrawLetterSize(PhoneBattery, 0.3, 0.35);
+    TextDrawTextSize(PhoneBattery, 376.0, 0.0);
+    TextDrawLetterSize(PhoneBattery, 0.3, 0.3);
     TextDrawSetShadow(PhoneBattery, 0);
 
-    PhoneSignal = TextDrawCreate(350.0, 143.0, "~w~...");
+    /* Signal */
+    PhoneSignal = TextDrawCreate(352.0, 142.0, "~w~...");
     TextDrawLetterSize(PhoneSignal, 0.12, 0.6);
     TextDrawSetShadow(PhoneSignal, 0);
 
-    PhoneHeader = TextDrawCreate(320.0, 155.0, "~w~~h~INFERNO Phone");
+    /* Header */
+    PhoneHeader = TextDrawCreate(320.0, 154.0, "~w~~h~INFERNO Phone");
     TextDrawLetterSize(PhoneHeader, 0.18, 0.85);
     TextDrawSetShadow(PhoneHeader, 0);
     TextDrawAlignment(PhoneHeader, 2);
 
-    new appNames[6][12] = {"Bank", "SMS", "Telepon", "GPS", "Toko", "Dokumen"};
+    /* App icons - colored boxes with text symbols */
     for (new i = 0; i < 6; i++)
     {
+        /* Background box - colored */
         PhoneAppBg[i] = TextDrawCreate(gAppPosX[i], gAppPosY[i], "_");
         TextDrawUseBox(PhoneAppBg[i], 1);
-        TextDrawBoxColor(PhoneAppBg[i], 0x37474FFF);
+        TextDrawBoxColor(PhoneAppBg[i], gAppColors[i]);
         TextDrawTextSize(PhoneAppBg[i], gAppPosX[i] + 30.0, 0.0);
         TextDrawLetterSize(PhoneAppBg[i], 0.5, 2.2);
         TextDrawSetShadow(PhoneAppBg[i], 0);
         TextDrawSetSelectable(PhoneAppBg[i], 1);
 
-        new Float:lblY = gAppPosY[i] + 18.0;
-        PhoneAppLabel[i] = TextDrawCreate(gAppPosX[i] + 15.0, lblY, appNames[i]);
+        /* Icon text - white symbol centered in box */
+        PhoneAppIcon[i] = TextDrawCreate(gAppPosX[i] + 15.0, gAppPosY[i] + 5.0, gAppIconText[i]);
+        TextDrawLetterSize(PhoneAppIcon[i], 0.35, 1.2);
+        TextDrawColor(PhoneAppIcon[i], 0xFFFFFFFF);
+        TextDrawSetShadow(PhoneAppIcon[i], 0);
+        TextDrawAlignment(PhoneAppIcon[i], 2);
+
+        /* Label below icon */
+        new Float:lblY = gAppPosY[i] + 19.0;
+        PhoneAppLabel[i] = TextDrawCreate(gAppPosX[i] + 15.0, lblY, gAppNames[i]);
         TextDrawLetterSize(PhoneAppLabel[i], 0.11, 0.5);
-        TextDrawColor(PhoneAppLabel[i], 0xB0BEC5FF);
+        TextDrawColor(PhoneAppLabel[i], 0xECEFF1FF);
         TextDrawSetShadow(PhoneAppLabel[i], 0);
         TextDrawAlignment(PhoneAppLabel[i], 2);
     }
 
-    PhoneDockBg = TextDrawCreate(260.0, 295.0, "_");
+    /* Dock */
+    PhoneDockBg = TextDrawCreate(260.0, 290.0, "_");
     TextDrawUseBox(PhoneDockBg, 1);
-    TextDrawBoxColor(PhoneDockBg, 0x003328FF);
+    TextDrawBoxColor(PhoneDockBg, 0x004D40FF);
     TextDrawTextSize(PhoneDockBg, 380.0, 0.0);
     TextDrawLetterSize(PhoneDockBg, 0.5, 2.5);
     TextDrawSetShadow(PhoneDockBg, 0);
 
-    PhoneHomeBtn = TextDrawCreate(310.0, 305.0, "_");
+    /* Home button */
+    PhoneHomeBtn = TextDrawCreate(310.0, 300.0, "_");
     TextDrawUseBox(PhoneHomeBtn, 1);
     TextDrawBoxColor(PhoneHomeBtn, 0xB0BEC5FF);
     TextDrawTextSize(PhoneHomeBtn, 330.0, 0.0);
     TextDrawLetterSize(PhoneHomeBtn, 0.5, 1.2);
     TextDrawSetShadow(PhoneHomeBtn, 0);
+    TextDrawSetSelectable(PhoneHomeBtn, 1);
 
-    print("[InfernoRP] Phone with 3D model icons created.");
+    print("[InfernoRP] Clean phone UI created.");
 }
 
 stock CreatePlayerPhoneIcons(playerid)
 {
-    for (new i = 0; i < 6; i++)
-    {
-        PhoneAppIcon[playerid][i] = CreatePlayerTextDraw(playerid, gAppPosX[i] + 2.0, gAppPosY[i] + 1.0, "_");
-        PlayerTextDrawFont(playerid, PhoneAppIcon[playerid][i], 5);
-        PlayerTextDrawColor(playerid, PhoneAppIcon[playerid][i], 0xFFFFFFFF);
-        PlayerTextDrawBackgroundColor(playerid, PhoneAppIcon[playerid][i], 0x00000000);
-        PlayerTextDrawTextSize(playerid, PhoneAppIcon[playerid][i], gAppPosX[i] + 28.0, gAppPosY[i] + 17.0);
-        PlayerTextDrawSetPreviewModel(playerid, PhoneAppIcon[playerid][i], gAppModels[i]);
-        if (i == 2)
-            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], 0.0, 0.0, 90.0, 1.0);
-        else if (i == 3)
-            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], -15.0, 0.0, -45.0, 0.8);
-        else
-            PlayerTextDrawSetPreviewRot(playerid, PhoneAppIcon[playerid][i], -10.0, 0.0, 0.0, 1.0);
-    }
+    /* No per-player icons needed - all global */
+    return 1;
 }
 
 stock ShowPhoneUI(playerid)
@@ -3610,11 +3632,13 @@ stock ShowPhoneUI(playerid)
     if (gPhoneOpen[playerid]) return;
     if (PlayerInfo[playerid][pPhone] == 0) return;
     gPhoneOpen[playerid] = true;
+
     new hour, minute;
     new tstr[16];
     gettime(hour, minute);
     format(tstr, sizeof(tstr), "%02d:%02d", hour, minute);
     TextDrawSetString(PhoneTime, tstr);
+
     TextDrawShowForPlayer(playerid, PhoneBg);
     TextDrawShowForPlayer(playerid, PhoneScreen);
     TextDrawShowForPlayer(playerid, PhoneNotch);
@@ -3626,13 +3650,13 @@ stock ShowPhoneUI(playerid)
     for (new i = 0; i < 6; i++)
     {
         TextDrawShowForPlayer(playerid, PhoneAppBg[i]);
+        TextDrawShowForPlayer(playerid, PhoneAppIcon[i]);
         TextDrawShowForPlayer(playerid, PhoneAppLabel[i]);
-        PlayerTextDrawShow(playerid, PhoneAppIcon[playerid][i]);
     }
     TextDrawShowForPlayer(playerid, PhoneDockBg);
     TextDrawShowForPlayer(playerid, PhoneHomeBtn);
     SelectTextDraw(playerid, 0x00897BAA);
-    SendMsg(playerid, COLOR_YELLOW, "Klik icon app untuk menggunakan. Tekan ESC untuk tutup.");
+    SendMsg(playerid, COLOR_YELLOW, "Klik app untuk menggunakan. Tekan ESC untuk tutup.");
 }
 
 stock HidePhoneUI(playerid)
@@ -3651,8 +3675,8 @@ stock HidePhoneUI(playerid)
     for (new i = 0; i < 6; i++)
     {
         TextDrawHideForPlayer(playerid, PhoneAppBg[i]);
+        TextDrawHideForPlayer(playerid, PhoneAppIcon[i]);
         TextDrawHideForPlayer(playerid, PhoneAppLabel[i]);
-        PlayerTextDrawHide(playerid, PhoneAppIcon[playerid][i]);
     }
     TextDrawHideForPlayer(playerid, PhoneDockBg);
     TextDrawHideForPlayer(playerid, PhoneHomeBtn);
@@ -3675,12 +3699,13 @@ stock ShowKTPCard(playerid)
     PlayerTextDrawLetterSize(playerid, KTP_Title[playerid], 0.18, 1.3);
     PlayerTextDrawSetShadow(playerid, KTP_Title[playerid], 0);
     PlayerTextDrawAlignment(playerid, KTP_Title[playerid], 2);
-    KTP_Photo[playerid] = CreatePlayerTextDraw(playerid, 210.0, 185.0, "_");
-    PlayerTextDrawFont(playerid, KTP_Photo[playerid], 5);
-    PlayerTextDrawBackgroundColor(playerid, KTP_Photo[playerid], 0x424242FF);
-    PlayerTextDrawTextSize(playerid, KTP_Photo[playerid], 260.0, 230.0);
-    PlayerTextDrawSetPreviewModel(playerid, KTP_Photo[playerid], PlayerInfo[playerid][pSkin]);
-    PlayerTextDrawSetPreviewRot(playerid, KTP_Photo[playerid], 0.0, 0.0, 0.0, 1.0);
+    KTP_Photo[playerid] = CreatePlayerTextDraw(playerid, 210.0, 185.0, "~w~[FOTO]");
+    PlayerTextDrawUseBox(playerid, KTP_Photo[playerid], 1);
+    PlayerTextDrawBoxColor(playerid, KTP_Photo[playerid], 0x424242FF);
+    PlayerTextDrawTextSize(playerid, KTP_Photo[playerid], 260.0, 0.0);
+    PlayerTextDrawLetterSize(playerid, KTP_Photo[playerid], 0.5, 4.0);
+    PlayerTextDrawSetShadow(playerid, KTP_Photo[playerid], 0);
+    PlayerTextDrawAlignment(playerid, KTP_Photo[playerid], 2);
     new _sf_ktp1[128];
     format(_sf_ktp1, sizeof(_sf_ktp1), "~b~Nama: ~w~%s", PlayerInfo[playerid][pName]);
     KTP_Name[playerid] = CreatePlayerTextDraw(playerid, 270.0, 185.0, _sf_ktp1);
@@ -3828,63 +3853,6 @@ public OnPlayerClickTextDraw(playerid, Text:clickedid)
     }
     return 0;
 }
-
-
-/* =====================================================================
- *  MAIN MENU & FULL COMMAND LIST
- * =====================================================================*/
-CMD:menu(playerid, params[])
-{
-    if (!PlayerInfo[playerid][pIsLogged]) return 1;
-    new str[512];
-    str[0] = EOS;
-    strcat(str, "{FFFFFF}=== Menu Inferno RP ===\n\n", sizeof(str));
-    strcat(str, "1. {00FF00}Stats Saya{FFFFFF}\n", sizeof(str));
-    strcat(str, "2. {00FF00}Help / Commands{FFFFFF}\n", sizeof(str));
-    strcat(str, "3. {00FF00}Pekerjaan{FFFFFF}\n", sizeof(str));
-    strcat(str, "4. {00FF00}Dokumen{FFFFFF}\n", sizeof(str));
-    strcat(str, "5. {00FF00}Handphone{FFFFFF}\n", sizeof(str));
-    strcat(str, "6. {00FF00}Bank / ATM{FFFFFF}\n", sizeof(str));
-    strcat(str, "7. {00FF00}GPS Navigation{FFFFFF}\n", sizeof(str));
-    strcat(str, "8. {00FF00}Admin Help{FFFFFF}\n", sizeof(str));
-    ShowPlayerDialog(playerid, 1101, DIALOG_STYLE_LIST, "{00FF00}Menu Utama", str, "Pilih", "Tutup");
-    return 1;
-}
-
-CMD:commands(playerid, params[])
-{
-    if (!PlayerInfo[playerid][pIsLogged]) return 1;
-    new str[1024];
-    str[0] = EOS;
-    strcat(str, "{FFFFFF}=== SEMUA COMMAND ===\n\n", sizeof(str));
-    strcat(str, "{00FF00}Umum:{FFFFFF} /stats /help /menu /commands\n\n", sizeof(str));
-    strcat(str, "{00FF00}Survival:{FFFFFF} /tidur /bangun /makan /minum /obat\n", sizeof(str));
-    strcat(str, " /makanresto /usedrug /fish\n\n", sizeof(str));
-    strcat(str, "{00FF00}Rumah:{FFFFFF} /buyhouse /sellhouse /enterhouse\n", sizeof(str));
-    strcat(str, " /exithouse /lockhouse\n\n", sizeof(str));
-    strcat(str, "{00FF00}Bisnis:{FFFFFF} /buybiz /sellbiz /bizmenu\n\n", sizeof(str));
-    strcat(str, "{00FF00}Kendaraan:{FFFFFF} /buycar /lockcar /park /engine\n", sizeof(str));
-    strcat(str, " /mycars /rentcar /isibensin /cekbensin\n\n", sizeof(str));
-    strcat(str, "{00FF00}Pekerjaan:{FFFFFF} /kerja /quitjob /mulaikerja\n", sizeof(str));
-    strcat(str, " /selesaikerja /repair\n\n", sizeof(str));
-    strcat(str, "{00FF00}HP:{FFFFFF} /hp /sms /call /angkat /hangup /topup\n", sizeof(str));
-    strcat(str, " /addcontact /contacts\n\n", sizeof(str));
-    strcat(str, "{00FF00}Bank:{FFFFFF} /bank /atm /transfer /kredit /bayarkredit\n\n", sizeof(str));
-    strcat(str, "{00FF00}Dokumen:{FFFFFF} /dokumen /urusdokumen\n\n", sizeof(str));
-    strcat(str, "{00FF00}Medis:{FFFFFF} /rawatinap /ambulans /resep\n\n", sizeof(str));
-    strcat(str, "{00FF00}Polisi:{FFFFFF} /duty /ticket /cuff /uncuff\n", sizeof(str));
-    strcat(str, " /sidang /putusan /jaksa /pengacara\n\n", sizeof(str));
-    strcat(str, "{00FF00}Gov:{FFFFFF} /pemerintah /daftarpilkada /pilkada\n\n", sizeof(str));
-    strcat(str, "{00FF00}Lainnya:{FFFFFF} /gps /beli /buyclothes\n", sizeof(str));
-    strcat(str, " /washmoney /pajak /creategang\n\n", sizeof(str));
-    strcat(str, "{00FF00}Admin:{FFFFFF} /ahelp /a /heal /armor /goto\n", sizeof(str));
-    strcat(str, " /gethere /freeze /slap /kick /ban\n", sizeof(str));
-    strcat(str, " /sethp /setcash /setskin /setlevel\n", sizeof(str));
-    strcat(str, " /setadmin /givemoney /tp /tppos\n", sizeof(str));
-    ShowPlayerDialog(playerid, 0, DIALOG_STYLE_MSGBOX, "{00FF00}Semua Command", str, "Tutup", "");
-    return 1;
-}
-
 
 
 /* =====================================================================
