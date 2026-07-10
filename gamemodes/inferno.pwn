@@ -3454,7 +3454,6 @@ CMD:tppos(playerid, params[])
 
 /* =====================================================================
  *  MODERN SMARTPHONE TEXTDRAW SYSTEM (Exact Screenshot Match)
- *  2x2 grid + 5 dock icons, black bezel, teal screen
  * =====================================================================*/
 
 new Text:PhoneBg;
@@ -3465,7 +3464,8 @@ new Text:PhoneAppBg[4];
 new Text:PhoneAppIcon[4];
 new Text:PhoneAppLabel[4];
 new Text:PhoneDockBg;
-new Text:PhoneDockIcon[5];
+new Text:PhoneDockBg2[5];
+new Text:PhoneDockSym[5];
 new Text:PhoneHomeBtn;
 new bool:gPhoneOpen[MAX_PLAYERS];
 
@@ -3486,31 +3486,45 @@ new PlayerText:STAT_Line4[MAX_PLAYERS];
 new PlayerText:STAT_Line5[MAX_PLAYERS];
 new bool:gStatOpen[MAX_PLAYERS];
 
-/* 2x2 grid positions */
-new Float:gAppX[4] = {275.0, 335.0, 275.0, 335.0};
-new Float:gAppY[4] = {170.0, 170.0, 220.0, 220.0};
+/* 2x2 grid - matching screenshot positions */
+new Float:gAppX[4] = {272.0, 332.0, 272.0, 332.0};
+new Float:gAppY[4] = {168.0, 168.0, 218.0, 218.0};
 
-/* App colors - matching screenshot */
+/* App box colors - exact match to screenshot */
 new gAppColors[4] = {
-    0x42A5F5FF, /* Bank - blue */
-    0x42A5F5FF, /* SMS - blue (screenshot shows light blue) */
-    0xFFA726FF, /* GPS - orange */
-    0x42A5F5FF  /* Dokumen - blue */
+    0x90CAF9FF, /* Bank - light blue */
+    0xAB47BCFF, /* App Store - purple */
+    0xECEFF1FF, /* X - white/gray */
+    0x78909CFF  /* Camera - gray */
 };
 
-/* App icon symbols - bold clean text */
-new gAppSymbols[4][8] = {"$", ">>", "<>", "##"};
-new gAppNames[4][12] = {"Bank", "SMS", "GPS", "Dokumen"};
+/* App icon symbols - matching screenshot */
+new gAppSymbols[4][4] = {"B", "A", "X", "C"};
+new gAppSymColors[4] = {
+    0xFFFFFFFF, /* Bank - white B */
+    0xFFFFFFFF, /* App Store - white A */
+    0x000000FF, /* X - black X */
+    0xFFFFFFFF  /* Camera - white C */
+};
+new gAppNames[4][16] = {"Bank", "App Store", "X", "Camera"};
 
-/* Dock icon colors */
+/* Dock: 5 icons */
+new Float:gDockX[5] = {262.0, 289.0, 316.0, 343.0, 370.0};
 new gDockColors[5] = {
     0x4CAF50FF, /* Phone - green */
     0x4CAF50FF, /* Messages - green */
-    0xFFFFFFFF, /* Info - white */
+    0xFFFFFFFF, /* Safari - white */
     0xFFFFFFFF, /* Music - white */
     0xFFFFFFFF  /* Settings - white */
 };
-new gDockSymbols[5][4] = {"()", ">>", "i", "m", "*"};
+new gDockSymbols[5][4] = {"(", ">", "O", "8", "*"};
+new gDockSymColors[5] = {
+    0xFFFFFFFF, /* Phone - white */
+    0xFFFFFFFF, /* Messages - white */
+    0x000000FF, /* Safari - black */
+    0x000000FF, /* Music - black */
+    0x000000FF  /* Settings - black */
+};
 
 stock CreatePhoneTextDraws()
 {
@@ -3522,7 +3536,7 @@ stock CreatePhoneTextDraws()
     TextDrawLetterSize(PhoneBg, 0.5, 27.0);
     TextDrawSetShadow(PhoneBg, 0);
 
-    /* Teal screen (#40E0D0) */
+    /* Teal screen */
     PhoneScreen = TextDrawCreate(256.0, 131.0, "_");
     TextDrawUseBox(PhoneScreen, 1);
     TextDrawBoxColor(PhoneScreen, 0x40E0D0FF);
@@ -3538,7 +3552,7 @@ stock CreatePhoneTextDraws()
     TextDrawLetterSize(PhoneNotch, 0.5, 0.5);
     TextDrawSetShadow(PhoneNotch, 0);
 
-    /* Clock - centered top */
+    /* Clock centered top */
     PhoneTime = TextDrawCreate(320.0, 137.0, "00:00");
     TextDrawLetterSize(PhoneTime, 0.20, 0.8);
     TextDrawColor(PhoneTime, 0xFFFFFFFF);
@@ -3553,50 +3567,54 @@ stock CreatePhoneTextDraws()
         PhoneAppBg[i] = TextDrawCreate(gAppX[i], gAppY[i], "_");
         TextDrawUseBox(PhoneAppBg[i], 1);
         TextDrawBoxColor(PhoneAppBg[i], gAppColors[i]);
-        TextDrawTextSize(PhoneAppBg[i], gAppX[i] + 40.0, 0.0);
+        TextDrawTextSize(PhoneAppBg[i], gAppX[i] + 38.0, 0.0);
         TextDrawLetterSize(PhoneAppBg[i], 0.5, 2.8);
         TextDrawSetShadow(PhoneAppBg[i], 0);
         TextDrawSetSelectable(PhoneAppBg[i], 1);
 
-        /* White icon symbol centered */
-        PhoneAppIcon[i] = TextDrawCreate(gAppX[i] + 20.0, gAppY[i] + 5.0, gAppSymbols[i]);
-        TextDrawLetterSize(PhoneAppIcon[i], 0.40, 1.5);
-        TextDrawColor(PhoneAppIcon[i], 0xFFFFFFFF);
+        /* Icon symbol centered */
+        PhoneAppIcon[i] = TextDrawCreate(gAppX[i] + 19.0, gAppY[i] + 5.0, gAppSymbols[i]);
+        TextDrawLetterSize(PhoneAppIcon[i], 0.45, 1.6);
+        TextDrawColor(PhoneAppIcon[i], gAppSymColors[i]);
         TextDrawSetShadow(PhoneAppIcon[i], 0);
-        TextDrawSetOutline(PhoneAppIcon[i], 1);
         TextDrawAlignment(PhoneAppIcon[i], 2);
 
-        /* Black label below */
-        new Float:lblY = gAppY[i] + 22.0;
-        PhoneAppLabel[i] = TextDrawCreate(gAppX[i] + 20.0, lblY, gAppNames[i]);
-        TextDrawLetterSize(PhoneAppLabel[i], 0.13, 0.55);
+        /* Label below */
+        new Float:lblY = gAppY[i] + 23.0;
+        PhoneAppLabel[i] = TextDrawCreate(gAppX[i] + 19.0, lblY, gAppNames[i]);
+        TextDrawLetterSize(PhoneAppLabel[i], 0.12, 0.55);
         TextDrawColor(PhoneAppLabel[i], 0x000000FF);
         TextDrawSetShadow(PhoneAppLabel[i], 0);
         TextDrawAlignment(PhoneAppLabel[i], 2);
     }
 
-    /* Dock background - slightly darker teal */
-    PhoneDockBg = TextDrawCreate(256.0, 280.0, "_");
+    /* Dock background */
+    PhoneDockBg = TextDrawCreate(256.0, 275.0, "_");
     TextDrawUseBox(PhoneDockBg, 1);
     TextDrawBoxColor(PhoneDockBg, 0x26C6DAFF);
     TextDrawTextSize(PhoneDockBg, 384.0, 0.0);
     TextDrawLetterSize(PhoneDockBg, 0.5, 3.0);
     TextDrawSetShadow(PhoneDockBg, 0);
 
-    /* 5 dock icons - circles (boxes) */
-    new Float:dockX[5] = {265.0, 290.0, 315.0, 340.0, 365.0};
+    /* 5 dock icons */
     for (new i = 0; i < 5; i++)
     {
-        PhoneDockIcon[i] = TextDrawCreate(dockX[i], 285.0, "_");
-        TextDrawUseBox(PhoneDockIcon[i], 1);
-        TextDrawBoxColor(PhoneDockIcon[i], gDockColors[i]);
-        TextDrawTextSize(PhoneDockIcon[i], dockX[i] + 18.0, 0.0);
-        TextDrawLetterSize(PhoneDockIcon[i], 0.5, 1.2);
-        TextDrawSetShadow(PhoneDockIcon[i], 0);
+        PhoneDockBg2[i] = TextDrawCreate(gDockX[i], 280.0, "_");
+        TextDrawUseBox(PhoneDockBg2[i], 1);
+        TextDrawBoxColor(PhoneDockBg2[i], gDockColors[i]);
+        TextDrawTextSize(PhoneDockBg2[i], gDockX[i] + 20.0, 0.0);
+        TextDrawLetterSize(PhoneDockBg2[i], 0.5, 1.3);
+        TextDrawSetShadow(PhoneDockBg2[i], 0);
+
+        PhoneDockSym[i] = TextDrawCreate(gDockX[i] + 10.0, 282.0, gDockSymbols[i]);
+        TextDrawLetterSize(PhoneDockSym[i], 0.25, 0.9);
+        TextDrawColor(PhoneDockSym[i], gDockSymColors[i]);
+        TextDrawSetShadow(PhoneDockSym[i], 0);
+        TextDrawAlignment(PhoneDockSym[i], 2);
     }
 
-    /* Home button - small white circle at bottom */
-    PhoneHomeBtn = TextDrawCreate(310.0, 305.0, "_");
+    /* Home button - white circle */
+    PhoneHomeBtn = TextDrawCreate(310.0, 300.0, "_");
     TextDrawUseBox(PhoneHomeBtn, 1);
     TextDrawBoxColor(PhoneHomeBtn, 0xFFFFFFFF);
     TextDrawTextSize(PhoneHomeBtn, 330.0, 0.0);
@@ -3631,7 +3649,10 @@ stock ShowPhoneUI(playerid)
     }
     TextDrawShowForPlayer(playerid, PhoneDockBg);
     for (new i = 0; i < 5; i++)
-        TextDrawShowForPlayer(playerid, PhoneDockIcon[i]);
+    {
+        TextDrawShowForPlayer(playerid, PhoneDockBg2[i]);
+        TextDrawShowForPlayer(playerid, PhoneDockSym[i]);
+    }
     TextDrawShowForPlayer(playerid, PhoneHomeBtn);
     SelectTextDraw(playerid, 0x40E0D0AA);
     SendMsg(playerid, COLOR_YELLOW, "Klik app untuk menggunakan. Tekan ESC untuk tutup.");
@@ -3654,7 +3675,10 @@ stock HidePhoneUI(playerid)
     }
     TextDrawHideForPlayer(playerid, PhoneDockBg);
     for (new i = 0; i < 5; i++)
-        TextDrawHideForPlayer(playerid, PhoneDockIcon[i]);
+    {
+        TextDrawHideForPlayer(playerid, PhoneDockBg2[i]);
+        TextDrawHideForPlayer(playerid, PhoneDockSym[i]);
+    }
     TextDrawHideForPlayer(playerid, PhoneHomeBtn);
 }
 
@@ -3817,9 +3841,9 @@ public OnPlayerClickTextDraw(playerid, Text:clickedid)
                 switch (i)
                 {
                     case 0: cmd_bank(playerid, "");
-                    case 1: SendMsg(playerid, COLOR_YELLOW, "Penggunaan: /sms [nomor] [pesan]");
+                    case 1: cmd_dokumen(playerid, "");
                     case 2: cmd_gps(playerid, "");
-                    case 3: cmd_dokumen(playerid, "");
+                    case 3: SendMsg(playerid, COLOR_YELLOW, "Kamera tidak tersedia.");
                 }
                 return 1;
             }
