@@ -3453,22 +3453,18 @@ CMD:tppos(playerid, params[])
 }
 
 /* =====================================================================
- *  MODERN SMARTPHONE TEXTDRAW SYSTEM (Clean UI - No 3D models)
+ *  MODERN SMARTPHONE TEXTDRAW SYSTEM (Matching Screenshot Design)
  * =====================================================================*/
 
-new Text:PhoneBg;
-new Text:PhoneScreen;
-new Text:PhoneNotch;
-new Text:PhoneStatusBar;
-new Text:PhoneTime;
-new Text:PhoneBattery;
-new Text:PhoneSignal;
-new Text:PhoneHeader;
-new Text:PhoneDockBg;
-new Text:PhoneHomeBtn;
-new Text:PhoneAppBg[6];
-new Text:PhoneAppIcon[6];
-new Text:PhoneAppLabel[6];
+new Text:PhoneBg;          /* White bezel */
+new Text:PhoneScreen;      /* Bright teal screen */
+new Text:PhoneNotch;       /* Notch at top */
+new Text:PhoneTime;        /* Clock in status bar */
+new Text:PhoneDockBg;      /* Dock background */
+new Text:PhoneHomeBtn;     /* Home button circle */
+new Text:PhoneAppBg[6];    /* Colored app boxes */
+new Text:PhoneAppIcon[6];  /* White symbol inside box */
+new Text:PhoneAppLabel[6]; /* Black label below icon */
 new bool:gPhoneOpen[MAX_PLAYERS];
 
 new PlayerText:KTP_Card[MAX_PLAYERS];
@@ -3488,165 +3484,123 @@ new PlayerText:STAT_Line4[MAX_PLAYERS];
 new PlayerText:STAT_Line5[MAX_PLAYERS];
 new bool:gStatOpen[MAX_PLAYERS];
 
-/* App positions: 3 cols x 2 rows */
-new Float:gAppPosX[6] = {268.0, 308.0, 348.0, 268.0, 308.0, 348.0};
-new Float:gAppPosY[6] = {180.0, 180.0, 180.0, 230.0, 230.0, 230.0};
+/* 3 columns x 2 rows grid */
+new Float:gAppX[6] = {267.0, 307.0, 347.0, 267.0, 307.0, 347.0};
+new Float:gAppY[6] = {175.0, 175.0, 175.0, 225.0, 225.0, 225.0};
 
-/* App colors */
+/* App box colors (matching screenshot) */
 new gAppColors[6] = {
-    0x2196F3FF, /* Bank - blue */
-    0x4CAF50FF, /* SMS - green */
-    0x00C853FF, /* Call - bright green */
-    0xF44336FF, /* GPS - red */
-    0xFF9800FF, /* Toko - orange */
-    0x9C27B0FF /* Dokumen - purple */
+    0x42A5F5FF, /* Bank - blue */
+    0x66BB6AFF, /* SMS - green */
+    0x26A69AFF, /* Call - teal green */
+    0xEF5350FF, /* GPS - red */
+    0xFFA726FF, /* Toko - orange */
+    0xAB47BCFF  /* Dokumen - purple */
 };
 
-/* App icon text (emoji-like using SA-MP text symbols) */
-new gAppIconText[6][16] = {
-    "$",    /* Bank - dollar sign */
-    ">>",   /* SMS - arrow (message) */
-    "()",   /* Call - phone */
-    "<>",   /* GPS - location */
-    "[]",   /* Toko - shop */
-    "##"    /* Dokumen - document */
-};
-
+/* White symbols inside boxes */
+new gAppSymbols[6][8] = {"$", ">>", "()", "<>", "[]", "##"};
 new gAppNames[6][12] = {"Bank", "SMS", "Telepon", "GPS", "Toko", "Dokumen"};
 
 stock CreatePhoneTextDraws()
 {
-    /* Phone bezel - black */
-    PhoneBg = TextDrawCreate(255.0, 130.0, "_");
+    /* White bezel - rounded rectangle look */
+    PhoneBg = TextDrawCreate(252.0, 128.0, "_");
     TextDrawUseBox(PhoneBg, 1);
-    TextDrawBoxColor(PhoneBg, 0x000000FF);
-    TextDrawTextSize(PhoneBg, 385.0, 0.0);
-    TextDrawLetterSize(PhoneBg, 0.5, 25.0);
+    TextDrawBoxColor(PhoneBg, 0xF5F5F5FF);
+    TextDrawTextSize(PhoneBg, 388.0, 0.0);
+    TextDrawLetterSize(PhoneBg, 0.5, 26.0);
     TextDrawSetShadow(PhoneBg, 0);
 
-    /* Phone screen - teal */
-    PhoneScreen = TextDrawCreate(260.0, 135.0, "_");
+    /* Bright teal screen (#40E0D0) */
+    PhoneScreen = TextDrawCreate(258.0, 134.0, "_");
     TextDrawUseBox(PhoneScreen, 1);
-    TextDrawBoxColor(PhoneScreen, 0x00897BFF);
-    TextDrawTextSize(PhoneScreen, 380.0, 0.0);
-    TextDrawLetterSize(PhoneScreen, 0.5, 24.0);
+    TextDrawBoxColor(PhoneScreen, 0x40E0D0FF);
+    TextDrawTextSize(PhoneScreen, 382.0, 0.0);
+    TextDrawLetterSize(PhoneScreen, 0.5, 24.5);
     TextDrawSetShadow(PhoneScreen, 0);
 
-    /* Notch */
-    PhoneNotch = TextDrawCreate(305.0, 135.0, "_");
+    /* Notch - black, small, centered top */
+    PhoneNotch = TextDrawCreate(308.0, 134.0, "_");
     TextDrawUseBox(PhoneNotch, 1);
     TextDrawBoxColor(PhoneNotch, 0x000000FF);
-    TextDrawTextSize(PhoneNotch, 335.0, 0.0);
+    TextDrawTextSize(PhoneNotch, 332.0, 0.0);
     TextDrawLetterSize(PhoneNotch, 0.5, 0.5);
     TextDrawSetShadow(PhoneNotch, 0);
 
-    /* Status bar */
-    PhoneStatusBar = TextDrawCreate(260.0, 141.0, "_");
-    TextDrawUseBox(PhoneStatusBar, 1);
-    TextDrawBoxColor(PhoneStatusBar, 0x00695CFF);
-    TextDrawTextSize(PhoneStatusBar, 380.0, 0.0);
-    TextDrawLetterSize(PhoneStatusBar, 0.5, 0.8);
-    TextDrawSetShadow(PhoneStatusBar, 0);
-
-    /* Clock */
-    PhoneTime = TextDrawCreate(265.0, 142.0, "00:00");
-    TextDrawLetterSize(PhoneTime, 0.16, 0.65);
+    /* Clock - centered in status bar area */
+    PhoneTime = TextDrawCreate(320.0, 140.0, "00:00");
+    TextDrawLetterSize(PhoneTime, 0.17, 0.7);
     TextDrawColor(PhoneTime, 0xFFFFFFFF);
     TextDrawSetShadow(PhoneTime, 0);
+    TextDrawSetOutline(PhoneTime, 1);
+    TextDrawAlignment(PhoneTime, 2);
 
-    /* Battery */
-    PhoneBattery = TextDrawCreate(368.0, 143.0, "_");
-    TextDrawUseBox(PhoneBattery, 1);
-    TextDrawBoxColor(PhoneBattery, 0x4CAF50FF);
-    TextDrawTextSize(PhoneBattery, 376.0, 0.0);
-    TextDrawLetterSize(PhoneBattery, 0.3, 0.3);
-    TextDrawSetShadow(PhoneBattery, 0);
-
-    /* Signal */
-    PhoneSignal = TextDrawCreate(352.0, 142.0, "~w~...");
-    TextDrawLetterSize(PhoneSignal, 0.12, 0.6);
-    TextDrawSetShadow(PhoneSignal, 0);
-
-    /* Header */
-    PhoneHeader = TextDrawCreate(320.0, 154.0, "~w~~h~INFERNO Phone");
-    TextDrawLetterSize(PhoneHeader, 0.18, 0.85);
-    TextDrawSetShadow(PhoneHeader, 0);
-    TextDrawAlignment(PhoneHeader, 2);
-
-    /* App icons - colored boxes with text symbols */
+    /* App icons - colored boxes with white border + white symbol */
     for (new i = 0; i < 6; i++)
     {
-        /* Background box - colored */
-        PhoneAppBg[i] = TextDrawCreate(gAppPosX[i], gAppPosY[i], "_");
+        /* Colored box background */
+        PhoneAppBg[i] = TextDrawCreate(gAppX[i], gAppY[i], "_");
         TextDrawUseBox(PhoneAppBg[i], 1);
         TextDrawBoxColor(PhoneAppBg[i], gAppColors[i]);
-        TextDrawTextSize(PhoneAppBg[i], gAppPosX[i] + 30.0, 0.0);
-        TextDrawLetterSize(PhoneAppBg[i], 0.5, 2.2);
+        TextDrawTextSize(PhoneAppBg[i], gAppX[i] + 32.0, 0.0);
+        TextDrawLetterSize(PhoneAppBg[i], 0.5, 2.0);
         TextDrawSetShadow(PhoneAppBg[i], 0);
         TextDrawSetSelectable(PhoneAppBg[i], 1);
 
-        /* Icon text - white symbol centered in box */
-        PhoneAppIcon[i] = TextDrawCreate(gAppPosX[i] + 15.0, gAppPosY[i] + 5.0, gAppIconText[i]);
-        TextDrawLetterSize(PhoneAppIcon[i], 0.35, 1.2);
+        /* White symbol centered in box */
+        PhoneAppIcon[i] = TextDrawCreate(gAppX[i] + 16.0, gAppY[i] + 4.0, gAppSymbols[i]);
+        TextDrawLetterSize(PhoneAppIcon[i], 0.30, 1.1);
         TextDrawColor(PhoneAppIcon[i], 0xFFFFFFFF);
         TextDrawSetShadow(PhoneAppIcon[i], 0);
+        TextDrawSetOutline(PhoneAppIcon[i], 1);
         TextDrawAlignment(PhoneAppIcon[i], 2);
 
-        /* Label below icon */
-        new Float:lblY = gAppPosY[i] + 19.0;
-        PhoneAppLabel[i] = TextDrawCreate(gAppPosX[i] + 15.0, lblY, gAppNames[i]);
-        TextDrawLetterSize(PhoneAppLabel[i], 0.11, 0.5);
-        TextDrawColor(PhoneAppLabel[i], 0xECEFF1FF);
+        /* Black label below icon */
+        new Float:lblY = gAppY[i] + 18.0;
+        PhoneAppLabel[i] = TextDrawCreate(gAppX[i] + 16.0, lblY, gAppNames[i]);
+        TextDrawLetterSize(PhoneAppLabel[i], 0.12, 0.55);
+        TextDrawColor(PhoneAppLabel[i], 0x000000FF);
         TextDrawSetShadow(PhoneAppLabel[i], 0);
         TextDrawAlignment(PhoneAppLabel[i], 2);
     }
 
-    /* Dock */
-    PhoneDockBg = TextDrawCreate(260.0, 290.0, "_");
+    /* Dock background - slightly darker teal */
+    PhoneDockBg = TextDrawCreate(258.0, 285.0, "_");
     TextDrawUseBox(PhoneDockBg, 1);
-    TextDrawBoxColor(PhoneDockBg, 0x004D40FF);
-    TextDrawTextSize(PhoneDockBg, 380.0, 0.0);
+    TextDrawBoxColor(PhoneDockBg, 0x26C6DAFF);
+    TextDrawTextSize(PhoneDockBg, 382.0, 0.0);
     TextDrawLetterSize(PhoneDockBg, 0.5, 2.5);
     TextDrawSetShadow(PhoneDockBg, 0);
 
-    /* Home button */
-    PhoneHomeBtn = TextDrawCreate(310.0, 300.0, "_");
+    /* Home button - white circle */
+    PhoneHomeBtn = TextDrawCreate(310.0, 298.0, "_");
     TextDrawUseBox(PhoneHomeBtn, 1);
-    TextDrawBoxColor(PhoneHomeBtn, 0xB0BEC5FF);
+    TextDrawBoxColor(PhoneHomeBtn, 0xFFFFFFFF);
     TextDrawTextSize(PhoneHomeBtn, 330.0, 0.0);
-    TextDrawLetterSize(PhoneHomeBtn, 0.5, 1.2);
+    TextDrawLetterSize(PhoneHomeBtn, 0.5, 1.0);
     TextDrawSetShadow(PhoneHomeBtn, 0);
     TextDrawSetSelectable(PhoneHomeBtn, 1);
 
-    print("[InfernoRP] Clean phone UI created.");
+    print("[InfernoRP] Phone UI created (screenshot-matching design).");
 }
 
-stock CreatePlayerPhoneIcons(playerid)
-{
-    /* No per-player icons needed - all global */
-    return 1;
-}
+stock CreatePlayerPhoneIcons(playerid) { return 1; }
 
 stock ShowPhoneUI(playerid)
 {
     if (gPhoneOpen[playerid]) return;
     if (PlayerInfo[playerid][pPhone] == 0) return;
     gPhoneOpen[playerid] = true;
-
     new hour, minute;
     new tstr[16];
     gettime(hour, minute);
     format(tstr, sizeof(tstr), "%02d:%02d", hour, minute);
     TextDrawSetString(PhoneTime, tstr);
-
     TextDrawShowForPlayer(playerid, PhoneBg);
     TextDrawShowForPlayer(playerid, PhoneScreen);
     TextDrawShowForPlayer(playerid, PhoneNotch);
-    TextDrawShowForPlayer(playerid, PhoneStatusBar);
     TextDrawShowForPlayer(playerid, PhoneTime);
-    TextDrawShowForPlayer(playerid, PhoneBattery);
-    TextDrawShowForPlayer(playerid, PhoneSignal);
-    TextDrawShowForPlayer(playerid, PhoneHeader);
     for (new i = 0; i < 6; i++)
     {
         TextDrawShowForPlayer(playerid, PhoneAppBg[i]);
@@ -3655,7 +3609,7 @@ stock ShowPhoneUI(playerid)
     }
     TextDrawShowForPlayer(playerid, PhoneDockBg);
     TextDrawShowForPlayer(playerid, PhoneHomeBtn);
-    SelectTextDraw(playerid, 0x00897BAA);
+    SelectTextDraw(playerid, 0x40E0D0AA);
     SendMsg(playerid, COLOR_YELLOW, "Klik app untuk menggunakan. Tekan ESC untuk tutup.");
 }
 
@@ -3667,11 +3621,7 @@ stock HidePhoneUI(playerid)
     TextDrawHideForPlayer(playerid, PhoneBg);
     TextDrawHideForPlayer(playerid, PhoneScreen);
     TextDrawHideForPlayer(playerid, PhoneNotch);
-    TextDrawHideForPlayer(playerid, PhoneStatusBar);
     TextDrawHideForPlayer(playerid, PhoneTime);
-    TextDrawHideForPlayer(playerid, PhoneBattery);
-    TextDrawHideForPlayer(playerid, PhoneSignal);
-    TextDrawHideForPlayer(playerid, PhoneHeader);
     for (new i = 0; i < 6; i++)
     {
         TextDrawHideForPlayer(playerid, PhoneAppBg[i]);
